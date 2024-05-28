@@ -1,8 +1,11 @@
 #include "Mesh.h"
 #include "Shader.h"
 #include "glad/glad.h"
+#include "Engine.h"
 
-Mesh::Mesh(std::vector<Vertex> Vertices,std::vector<unsigned int> Indices, std::vector<Texture> Textures)
+#include <iostream>
+
+Mesh::Mesh(std::vector<Vertex> Vertices,std::vector<unsigned int> Indices, std::vector<Texture2D> Textures)
 	: vertices{ Vertices }, indices{ Indices }, textures{ Textures }
 {
 	setupMesh();
@@ -10,15 +13,18 @@ Mesh::Mesh(std::vector<Vertex> Vertices,std::vector<unsigned int> Indices, std::
 
 void Mesh::setupMesh()
 {
+	// Generate VAO, VBO and EBO.
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
 
 	glBindVertexArray(VAO);
 
+	// Load VBO data.
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
+	// Load EBO data.
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
@@ -34,6 +40,7 @@ void Mesh::setupMesh()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Vertex::TextureCoords));
 
+	// Unbind VAO.
 	glBindVertexArray(0);
 }
 
@@ -43,8 +50,6 @@ void Mesh::Draw(Shader& shader)
 	unsigned int specularNumber = 1;
 	for (unsigned int i = 0; i < textures.size(); ++i)
 	{
-		glActiveTexture(GL_TEXTURE0 + i);
-
 		std::string name, number;
 
 		switch (textures[i].type)
@@ -60,13 +65,35 @@ void Mesh::Draw(Shader& shader)
 		}
 
 		shader.setuInt(("material." + name + number).c_str(), i);
-		glBindTexture(GL_TEXTURE_2D, textures[i].id);
+		textures[i].use(i);
+	}
+
+	if (textures.size() == 0)
+	{
+		// Use default texture if the mesh contains no textures.
+		shader.setuInt("material.diffuse1", 0);
+		Engine::Instance().defaultTexture.use(0);
 	}
 
 	// This sets the active texture to default so that in future we get nothing unexpected.
 	glActiveTexture(GL_TEXTURE0);
 
 	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, GLint(indices.size()), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+}
+
+unsigned int& Mesh::getVAO()
+{
+	return VAO;
+}
+
+unsigned int& Mesh::getVBO()
+{
+	return VBO;
+}
+
+unsigned int& Mesh::getEBO()
+{
+	return EBO;
 }

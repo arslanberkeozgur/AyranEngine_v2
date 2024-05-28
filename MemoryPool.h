@@ -16,7 +16,6 @@ typedef std::tuple<
 	std::vector<cInput>,
 	std::vector<cCamera>,
 	std::vector<cShader>,
-	std::vector<cVAO>,
 	std::vector<cPointLight>,
 	std::vector<cSpotLight>,
 	std::vector<cModel>
@@ -46,7 +45,6 @@ class MemoryPool
 		std::get<std::vector<cInput>>(componentVectors).resize(resizeValue);
 		std::get<std::vector<cCamera>>(componentVectors).resize(resizeValue);
 		std::get<std::vector<cShader>>(componentVectors).resize(resizeValue);
-		std::get<std::vector<cVAO>>(componentVectors).resize(resizeValue);
 		std::get<std::vector<cPointLight>>(componentVectors).resize(resizeValue);
 		std::get<std::vector<cSpotLight>>(componentVectors).resize(resizeValue);
 		std::get<std::vector<cModel>>(componentVectors).resize(resizeValue);
@@ -84,7 +82,6 @@ class MemoryPool
 		std::get<std::vector<cInput>>(componentVectors)[entityID] = cInput();
 		std::get<std::vector<cCamera>>(componentVectors)[entityID] = cCamera();
 		std::get<std::vector<cShader>>(componentVectors)[entityID] = cShader();
-		std::get<std::vector<cVAO>>(componentVectors)[entityID] = cVAO();
 		std::get<std::vector<cPointLight>>(componentVectors)[entityID] = cPointLight();
 		std::get<std::vector<cSpotLight>>(componentVectors)[entityID] = cSpotLight();
 		std::get<std::vector<cModel>>(componentVectors)[entityID] = cModel();

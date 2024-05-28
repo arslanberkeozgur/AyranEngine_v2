@@ -4,9 +4,9 @@
 
 struct Action
 {
-	Action_Type			type		= Action_Type::NO_TYPE;
-	Action_Event_Type	eventType   = Action_Event_Type::NO_TYPE;
+	ActionType			type		= ActionType::NO_TYPE;
+	ActionEventType	eventType   = ActionEventType::NO_TYPE;
 
-	Action(Action_Type Type, Action_Event_Type EventType) : type{ Type }, eventType{ EventType } {}
+	Action(ActionType Type, ActionEventType EventType) : type{ Type }, eventType{ EventType } {}
 	Action() {}
 };

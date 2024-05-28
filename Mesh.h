@@ -4,14 +4,9 @@
 #include <string>
 #include <vector>
 #include <string>
+#include "Texture2D.h"
 
 class Shader;
-
-enum class TextureType
-{
-	DIFFUSE,
-	SPECULAR
-};
 
 struct Vertex
 {
@@ -20,23 +15,20 @@ struct Vertex
 	glm::vec2 TextureCoords;
 };
 
-struct Texture
-{
-	unsigned int id;
-	TextureType type;
-	std::string path;
-};
-
 class Mesh
 {
 public:
 	std::vector<Vertex>			vertices;
 	std::vector<unsigned int>	indices;
-	std::vector<Texture>		textures;
+	std::vector<Texture2D>		textures;
 
-	Mesh(std::vector<Vertex> Vertices, std::vector<unsigned int> Indices, std::vector<Texture> Textures);
+	Mesh(std::vector<Vertex> Vertices, std::vector<unsigned int> Indices, std::vector<Texture2D> Textures);
 	
 	void Draw(Shader& shader);
+
+	unsigned int& getVAO();
+	unsigned int& getVBO();
+	unsigned int& getEBO();
 
 private:
 	unsigned int VAO, VBO, EBO;

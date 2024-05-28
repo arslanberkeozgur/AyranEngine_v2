@@ -6,29 +6,30 @@
 
 class Shader;
 
+enum class TextureType
+{
+	DIFFUSE,
+	SPECULAR
+};
+
 class Texture2D
 {
 public:
-	Texture2D(std::string nname);
+	Texture2D();
 	bool load(const std::string& path);
 
-	std::string name;
 	unsigned int ID;
+	TextureType type;
+	std::string path;
 
-	void use() const;
+	void use(unsigned int i) const;
 
-	void setSpecularUnit(const Shader& shader, unsigned int unit);
-	void setDiffuseUnit(const Shader& shader, unsigned int unit);
-	void setEmissionUnit(const Shader& shader, unsigned int unit);
 	void setHorizontalWrapMode(GLenum mode);
 	void setVerticalWrapMode(GLenum mode);
 	void setMinFilter(GLenum filter);
 	void setMagFilter(GLenum filter);
 
-	unsigned int getTextureUnit() const;
-
 private:
-	unsigned int textureUnit;
 	GLenum horizontalWrapMode;
 	GLenum verticalWrapMode;
 	GLenum minFilter;

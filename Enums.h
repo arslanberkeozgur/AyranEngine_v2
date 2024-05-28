@@ -13,7 +13,7 @@ enum class Material
 	CHROME
 };
 
-enum class Action_Type
+enum class ActionType
 {
 	NO_TYPE,
 	MOVE_FORWARD,
@@ -31,10 +31,16 @@ enum class Action_Type
 	TOGGLE_FLASHLIGHT
 };
 
-enum class Action_Event_Type
+enum class ActionEventType
 {
 	NO_TYPE,
 	BEGIN,
 	CONTINUE,
 	END
+};
+
+enum class ShaderType
+{
+	DEFAULT,
+	LIGHT_SOURCE
 };

@@ -26,8 +26,6 @@ public:
 	void setFMat4(const std::string& name, glm::mat4& mat4);
 	void setFMat3(const std::string& name, glm::mat3& mat3);
 
-	~Shader();
-
 private:
 	void generateShaderProgram(const char* vertexSource, const char* fragmentSource);
 

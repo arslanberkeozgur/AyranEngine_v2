@@ -50,7 +50,6 @@ public:
 	void removeComponent()
 	{
 		Engine::Instance().OnRemoveComponent(MemoryPool::Instance().getComponent<T>(ID));
-
 		MemoryPool::Instance().getComponent<T>(ID).active = false;
 	}
 

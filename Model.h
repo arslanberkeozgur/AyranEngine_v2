@@ -14,15 +14,15 @@ public:
 
 	Model(const std::string& path) { loadModel(path); }
 	void Draw(Shader& shader);
+	~Model();
 
 private:
 	std::vector<Mesh> meshes;
 	std::string directory;
-	std::vector<Texture> texturesLoaded;
+	std::vector<Texture2D> texturesLoaded;
 
 	void loadModel(const std::string& path);
 	void processNode(aiNode* node, const aiScene* scene);
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
-	std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType engineType);
-	unsigned int textureFromFile(const char* path, const std::string& directory, bool gamma = true);
+	std::vector<Texture2D> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType engineType);
 };

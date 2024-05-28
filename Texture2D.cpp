@@ -5,18 +5,17 @@
 #include <iostream>
 #include <sstream>
 
-Texture2D::Texture2D(std::string nname)
-	: textureUnit{GL_TEXTURE0}, name{nname}, horizontalWrapMode{GL_REPEAT}, verticalWrapMode{GL_REPEAT}, 
+Texture2D::Texture2D()
+	: horizontalWrapMode{GL_REPEAT}, verticalWrapMode{GL_REPEAT}, 
 	minFilter{GL_LINEAR_MIPMAP_LINEAR}, magFilter{GL_LINEAR}
-{
-	stbi_set_flip_vertically_on_load(true);
-}
+{}
 
 bool Texture2D::load(const std::string& path)
 {
+	this->path = path;
+
 	// Generate and bind texture.
 	glGenTextures(1, &ID);
-	glActiveTexture(textureUnit);
 	glBindTexture(GL_TEXTURE_2D, ID);
 
 	// Set texture parameters.
@@ -33,21 +32,32 @@ bool Texture2D::load(const std::string& path)
 		std::cerr << "Failed to load texture from path '" << path << "'" << std::endl;
 		return false;
 	}
-	if (nrChannels == 3)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	}
-	else if (nrChannels == 4)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	}
-	else
-		std::cout << "Extension not recognized." << std::endl;
 
+	GLenum format;
+
+	switch (nrChannels)
+	{
+	case 1:
+		format = GL_RED;
+		break;
+	case 3:
+		format = GL_RGB;
+		break;
+	case 4:
+		format = GL_RGBA;
+		break;
+	default:
+		std::cout << "Texture of unknown format at path : " << path << std::endl;
+		stbi_image_free(data);
+		return false;
+	}
+	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 	// Generate mipmap.
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-	std::cout << "Texture '" << name << "' has been succesfully loaded." << std::endl;
+	std::cout << "Texture at path: '" << path << "' has been succesfully loaded." << std::endl;
 
 	// Free resources.
 	stbi_image_free(data);
@@ -55,33 +65,10 @@ bool Texture2D::load(const std::string& path)
 	return true;
 }
 
-void Texture2D::use() const
+void Texture2D::use(unsigned int i) const
 {
-	GLenum texUnit = GL_TEXTURE0 + textureUnit;
-	glActiveTexture(texUnit);
+	glActiveTexture(GL_TEXTURE0 + i);
 	glBindTexture(GL_TEXTURE_2D, ID);
-}
-
-void Texture2D::setSpecularUnit(const Shader& shader, unsigned int unit)
-{
-	// Naming convention in the shader: "Texture"(unit), e.g. if unit == 0, name the sampler as Texture0. 
-	textureUnit = unit;
-	shader.use();
-	shader.setuInt("material.specular", unit);
-}
-
-void Texture2D::setDiffuseUnit(const Shader& shader, unsigned int unit)
-{
-	textureUnit = unit;
-	shader.use();
-	shader.setuInt("material.diffuse", unit);
-}
-
-void Texture2D::setEmissionUnit(const Shader& shader, unsigned int unit)
-{
-	textureUnit = unit;
-	shader.use();
-	shader.setuInt("material.emission", unit);
 }
 
 void Texture2D::setHorizontalWrapMode(GLenum mode)
@@ -102,9 +89,4 @@ void Texture2D::setMinFilter(GLenum filter)
 void Texture2D::setMagFilter(GLenum filter)
 {
 	magFilter = filter;
-}
-
-unsigned int Texture2D::getTextureUnit() const
-{
-	return textureUnit;
 }

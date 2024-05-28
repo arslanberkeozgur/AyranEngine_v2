@@ -143,9 +143,3 @@ void Shader::setFMat3(const std::string& name, glm::mat3& mat3)
 {
 	glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat3));
 }
-
-Shader::~Shader()
-{
-	std::cout << "Shader destroyed\n";
-	if (ID >= 0) glDeleteProgram(ID);
-}

@@ -4,18 +4,18 @@
 #include <string>
 #include <memory>
 
+#include "Enums.h"
 #include "Shader.h"
 #include "Input.h"
 #include "Model.h"
 
-enum class Component_Type
+enum class ComponentType
 {
 	NULL_TYPE,
 	TRANSFORM,
 	INPUT,
 	CAMERA,
 	SHADER,
-	VAO,
 	POINT_LIGHT,
 	SPOT_LIGHT,
 	MODEL
@@ -27,7 +27,7 @@ struct Component
 	size_t ownerID = -1;
 
 	// hack! for now.
-	Component_Type type = Component_Type::NULL_TYPE;
+	ComponentType type = ComponentType::NULL_TYPE;
 
 	Component() {}
 };
@@ -43,41 +43,44 @@ struct cTransform : Component
 	glm::vec3	right;
 	float		yaw				= -90.0f;
 	float		pitch			= 0.0f;
+	float		eulerX			= 0.0f;
+	float		eulerY			= 0.0f;
+	float		eulerZ			= 0.0f;
 
 	cTransform()
 	{
 		right = glm::normalize(glm::cross(front, up));
-		type = Component_Type::TRANSFORM;
+		type = ComponentType::TRANSFORM;
 	}
 	cTransform(glm::vec3 pos, glm::vec3 front, glm::vec3 up, glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f))
 		: position{ pos }, front{ front }, up{ up }, scale{ scale }
 	{
 		right = glm::normalize(glm::cross(front, up));
-		type = Component_Type::TRANSFORM;
+		type = ComponentType::TRANSFORM;
 	}
 	explicit cTransform(glm::vec3 pos)
 		: position{ pos }
 	{
 		right = glm::normalize(glm::cross(front, up));
-		type = Component_Type::TRANSFORM;
+		type = ComponentType::TRANSFORM;
 	}
 };
 
 struct cInput : Component
 {
-	std::vector<Action_Type> actions;
+	std::vector<ActionType> actions;
 	cInput() 
 	{
-		type = Component_Type::INPUT;
+		type = ComponentType::INPUT;
 	}
 
-	void BindAction(Action_Type type)
+	void BindAction(ActionType type)
 	{
 		actions.push_back(type);
 	}
-	void UnbindAction(Action_Type type)
+	void UnbindAction(ActionType type)
 	{
-		auto result = std::remove_if(actions.begin(), actions.end(), [type](Action_Type& elem) {return elem == type; });
+		auto result = std::remove_if(actions.begin(), actions.end(), [type](ActionType& elem) {return elem == type; });
 		actions.erase(result, actions.end());
 	}
 };
@@ -89,34 +92,21 @@ struct cCamera : Component
 
 	cCamera() 
 	{
-		type = Component_Type::CAMERA;
+		type = ComponentType::CAMERA;
 	}
 };
 
 struct cShader : Component
 {
-	std::string name;
+	Shader shader;
 
 	cShader() 
 	{
-		type = Component_Type::SHADER;
+		type = ComponentType::SHADER;
 	}
-	cShader(const std::string& Name) : name{ Name } 
+	cShader(Shader Shader) : shader{ Shader } 
 	{
-		type = Component_Type::SHADER;
-	}
-};
-
-struct cVAO : Component
-{
-	unsigned int VAO = -1;
-	cVAO() 
-	{
-		type = Component_Type::VAO;
-	}
-	cVAO(unsigned int vao) : VAO{ vao } 
-	{
-		type = Component_Type::VAO;
+		type = ComponentType::SHADER;
 	}
 };
 
@@ -132,12 +122,12 @@ struct cPointLight : Component
 
 	cPointLight() 
 	{ 
-		type = Component_Type::POINT_LIGHT;
+		type = ComponentType::POINT_LIGHT;
 	}
 	cPointLight(glm::vec3& Ambient, glm::vec3& Diffuse, glm::vec3& Specular, float Constant = 1.0f, float Linear = 0.09f, float Quadratic = 0.032f)
 		: ambient{ Ambient }, diffuse{ Diffuse }, specular{ Specular }, constant{ Constant }, linear{ Linear }, quadratic{ Quadratic } 
 	{
-		type = Component_Type::POINT_LIGHT;
+		type = ComponentType::POINT_LIGHT;
 	}
 };
 
@@ -155,7 +145,7 @@ struct cSpotLight : Component
 
 	cSpotLight()
 	{
-		type = Component_Type::SPOT_LIGHT;
+		type = ComponentType::SPOT_LIGHT;
 	}
 	cSpotLight
 	(
@@ -166,7 +156,7 @@ struct cSpotLight : Component
 		: ambient{ Ambient }, diffuse{ Diffuse }, specular{ Specular }, cutoff{ Cutoff }, outerCutoff{ OuterCutoff },
 		  constant{Constant}, linear{Linear}, quadratic{Quadratic}
 	{
-		type = Component_Type::SPOT_LIGHT;
+		type = ComponentType::SPOT_LIGHT;
 	}
 };
 
@@ -174,6 +164,12 @@ struct cModel : Component
 {
 	std::shared_ptr<Model> model = nullptr;
 	
-	cModel() {}
-	cModel(std::shared_ptr<Model> Model) : model{ Model } {}
+	cModel() 
+	{
+		type = ComponentType::MODEL;
+	}
+	cModel(std::shared_ptr<Model> Model) : model{ Model } 
+	{
+		type = ComponentType::MODEL;
+	}
 };

@@ -60,6 +60,12 @@ struct SpotLight
     vec3 specular;
 };
 
+struct CamInfo
+{
+    float near;
+    float far;
+};
+
 uniform Material material;
 
 uniform DirectionalLight directionalLight;
@@ -70,9 +76,12 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numOfSpotLights;
 uniform SpotLight spotLights[MAX_SPOTLIGHTS];
 
+uniform CamInfo camInfo;
+
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection);
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection);
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection);
+float LinearizeDepth(float depth);
 
 void main()
 { 
@@ -143,4 +152,10 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 vi
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
 
     return intensity * attenuation * (ambient + diffuse + specular);
+}
+
+float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0f - 1.0f;
+    return (2.0f * camInfo.near * camInfo.far) / (camInfo.far + camInfo.near - z * (camInfo.far - camInfo.near));
 }

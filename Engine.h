@@ -27,17 +27,20 @@ typedef std::map<std::string, std::shared_ptr<Scene>> SceneMap;
 class Engine
 {
 private:
-	Engine(unsigned int SW = 1600, unsigned int SH = 900, bool wireframe = false);
+	Engine();
 public:
 	static Engine& Instance();
 	~Engine();
+	Engine(Engine const&) = delete;
+	void operator=(Engine const&) = delete;
 
 public:
-	unsigned int					SCREEN_WIDTH				    = 1600;
-	unsigned int					SCREEN_HEIGHT					= 900;
+	// General configuration options
+	static unsigned int				SCREEN_WIDTH;
+	static unsigned int				SCREEN_HEIGHT;
+	static bool						FULLSCREEN;
 	bool							WIREFRAME						= false;
 
-	float							inputMoveSpeed					= 2.0f;
 	float							inputMouseSensitivity			= 0.1f;
 	bool							inputCameraConstrainPitch		= true;
 	
@@ -55,7 +58,9 @@ public:
 	ShaderMap						shaderMap;
 	Shader							activeShader;
 
+	// An action map is a mapping from keys to Actions.
 	ActionMap						actionMap;
+	// Registered actions is a vector of actions that are currently active.
 	std::vector<Action>				registeredActions;
 
 	SceneMap						sceneMap;
@@ -70,6 +75,12 @@ private:
 	double					currentTime						= 0.0f;
 	double					startTime						= 0.0f;
 
+	// Perspective data.
+	float					FOV								= 45.0f;
+	float					nearFrustum						= 0.1f;
+	float					farFrustum						= 100.0f;
+	
+	// Data related to lighting.
 	unsigned int			sceneNumOfPointLights			= 0;
 	unsigned int			sceneNumOfSpotLights			= 0;
 
@@ -103,10 +114,15 @@ private:
 	void ProcessInput();
 	void ExecuteActions(Entity& e);
 
+public:
+	void ApplyVelocity(Entity e, glm::vec3 vel);
+	void AddLocalRotation(Entity e, glm::vec3 axis, float angle);
+	void AddGlobalRotation(Entity e, glm::vec3 axis, float angle);
+
 private:
-	glm::mat4				model = glm::mat4(1.0f);
-	glm::mat4				view = glm::mat4(1.0f);
-	glm::mat4				projection = glm::mat4(1.0f);
+	glm::mat4 model = glm::mat4(1.0f);
+	glm::mat4 view = glm::mat4(1.0f);
+	glm::mat4 projection = glm::mat4(1.0f);
 
 	void CalculateViewMatrix(Shader& shader);
 	void CalculateProjectionMatrix(Shader& shader);

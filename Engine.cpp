@@ -1,3 +1,5 @@
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "Engine.h"
 #include "Shader.h"
 #include "Texture2D.h"
@@ -9,10 +11,15 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <typeinfo>
 
-Engine::Engine(unsigned int SW, unsigned int SH, bool wireframe)
-	: SCREEN_WIDTH{SW}, SCREEN_HEIGHT{SH}, WIREFRAME{wireframe}
+unsigned int Engine::SCREEN_WIDTH  = 1600;
+unsigned int Engine::SCREEN_HEIGHT = 900;
+bool		 Engine::FULLSCREEN	   = false;
+
+Engine::Engine()
 {
 	lastMouseX = float(SCREEN_WIDTH) / 2;
 	lastMouseY = float(SCREEN_HEIGHT) / 2;
@@ -24,7 +31,7 @@ Engine::Engine(unsigned int SW, unsigned int SH, bool wireframe)
 
 Engine& Engine::Instance()
 {
-	static Engine engine(1600, 900, false);
+	static Engine engine;
 	return engine;
 }
 
@@ -33,8 +40,6 @@ void Engine::Run()
 	startTime = glfwGetTime();
 	SetupShaders();
 	OnStartEngine();
-
-	entityManager->getEntitiesWithTag("house1")[0].addComponent<cShader>(shaderMap[ShaderType::LIGHT_SOURCE]);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -58,7 +63,7 @@ void Engine::CreateWindow()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Recap", NULL, NULL);
+	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Recap", FULLSCREEN ? glfwGetPrimaryMonitor() : NULL, NULL);
 	if (!window)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -90,6 +95,8 @@ void Engine::SetupShaders()
 	// TODO:
 	// This will need to change later once we add customizable materials.
 	activeShader.setFloat("material.shininess", 64.0f);
+	activeShader.setFloat("camInfo.near", nearFrustum);
+	activeShader.setFloat("camInfo.far", farFrustum);
 }
 
 void Engine::OnStartEngine()
@@ -98,6 +105,7 @@ void Engine::OnStartEngine()
 	defaultTexture.type = TextureType::DIFFUSE;
 
 	models.push_back(std::make_shared<Model>("models/house/house.obj"));
+	models.push_back(std::make_shared<Model>("models/ashtray/ashtray.obj"));
 
 	if (WIREFRAME)
 	{
@@ -144,7 +152,7 @@ void Engine::CalculateViewMatrix(Shader& shader)
 
 void Engine::CalculateProjectionMatrix(Shader& shader)
 {
-	projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / SCREEN_HEIGHT, 0.1f, 100.0f);
+	projection = glm::perspective(glm::radians(FOV), (float)SCREEN_WIDTH / SCREEN_HEIGHT, nearFrustum, farFrustum);
 	shader.setFMat4("projection", projection);
 }
 
@@ -224,19 +232,21 @@ void Engine::Render()
 			activeShader.use();
 			activeShader.setFMat4("view", view);
 			activeShader.setFMat4("projection", projection);
-			activeShader.setFVec3("color", glm::vec3(glm::abs(glm::sin(currentTime)), 0.0f, 0.0f));
+			activeShader.setFVec3("color", glm::vec3(glm::abs(glm::sin(2 * currentTime)), 0.0f, 0.0f));
 		}
 
 		ExecuteActions(e);
 
-		if (e.hasComponent<cTransform>())
+		if (e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, e.getComponent<cTransform>().position);
-			model = glm::scale(model, e.getComponent<cTransform>().scale);
-			model = glm::rotate(model, glm::radians(e.getComponent<cTransform>().eulerX), glm::vec3(1.0f, 0.0f, 0.0f));
-			model = glm::rotate(model, glm::radians(e.getComponent<cTransform>().eulerY), glm::vec3(0.0f, 1.0f, 0.0f));
-			model = glm::rotate(model, glm::radians(e.getComponent<cTransform>().eulerZ), glm::vec3(0.0f, 0.0f, 1.0f));
+			glm::mat4 translationMatrix = glm::mat4(1.0f);
+			translationMatrix = glm::translate(translationMatrix, e.getComponent<cTransform>().position);
+			glm::mat4 scaleMatrix = glm::mat4(1.0f);
+			scaleMatrix = glm::scale(scaleMatrix, e.getComponent<cTransform>().scale);
+			glm::mat4 rotationMatrix = glm::toMat4(e.getComponent<cTransform>().orientation);
+			
+
+			glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
 			activeShader.setFMat4("model", model);
 
 			// Calculate the normal matrix
@@ -256,6 +266,8 @@ void Engine::Render()
 
 void Engine::ProcessInput()
 {
+	// TODO: Instead of polling, set an event-based input system.
+
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
@@ -266,16 +278,20 @@ void Engine::ProcessInput()
 
 	for (auto& element : actionMap)
 	{
+		// For all elements of the action map, see if that action is registered currently by the user.
 		auto it = std::find_if(registeredActions.begin(), registeredActions.end(), [element](Action& a) {return a.type == element.second; });
 		bool found = (it == registeredActions.end()) ? false : true;
+		// If the action is not currently registered but is pressed, then register the action.
 		if (glfwGetKey(window, element.first) == GLFW_PRESS && !found)
 		{
 			registeredActions.push_back(Action(element.second, ActionEventType::BEGIN));
 		}
+		// If the action is registered and continually pressed, then set its type to CONTINUE.
 		if (glfwGetKey(window, element.first) == GLFW_PRESS && found)
 		{
 			it->eventType = ActionEventType::CONTINUE;
 		}
+		// If the action is registered and it is just released, then set its type to END.
 		if (glfwGetKey(window, element.first) == GLFW_RELEASE && found)
 		{
 			it->eventType = ActionEventType::END;
@@ -289,6 +305,8 @@ void Engine::ExecuteActions(Entity& e)
 	{
 		for (ActionType actionType : e.getComponent<cInput>().actions)
 		{
+			// Loop over all the defined actions of the entity. If any of the defined actions are currently registered, 
+			// pass it to the active scene's definition of the action.
 			auto it = std::find_if(registeredActions.begin(), registeredActions.end(), [actionType](Action& a) {return a.type == actionType; });
 			bool found = (it == registeredActions.end()) ? false : true;
 			if (found) activeScene->DefineActions(e, (*it));
@@ -304,8 +322,43 @@ void Engine::TransformEntities()
 		{
 			cTransform& transform = e.getComponent<cTransform>();
 			transform.position += transform.velocity;
+			transform.velocity = glm::vec3(0.0f);
+
+			transform.front = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 0.0, -1.0)));
+			transform.up = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 1.0, 0.0)));
+			transform.right = glm::cross(transform.front, transform.up);
 		}
 	}
+}
+
+void Engine::ApplyVelocity(Entity e, glm::vec3 vel)
+{
+	if (e.hasComponent<cTransform>())
+		e.getComponent<cTransform>().velocity += vel;
+	else
+		std::cout << "WARNING::Applying velocity to an entity with no cTransform component::EntityTag=" << e.getTag() << std::endl;
+}
+
+void Engine::AddLocalRotation(Entity e, glm::vec3 axis, float angle)
+// Axis need not be normalized, angle is in degrees.
+{
+	if (e.hasComponent<cTransform>())
+	{
+		e.getComponent<cTransform>().orientation = glm::rotate(e.getComponent<cTransform>().orientation, glm::radians(angle), glm::normalize(axis));
+	}
+	else 
+		std::cout << "WARNING::Attempting rotation on an entity with no cTransform component::EntityTag=" << e.getTag() << std::endl;
+}
+
+void Engine::AddGlobalRotation(Entity e, glm::vec3 axis, float angle)
+{
+	if (e.hasComponent<cTransform>())
+	{
+		glm::quat rotation = glm::angleAxis(glm::radians(angle), glm::normalize(axis));
+		e.getComponent<cTransform>().orientation = rotation * e.getComponent<cTransform>().orientation;
+	}
+	else
+		std::cout << "WARNING::Attempting rotation on an entity with no cTransform component::EntityTag=" << e.getTag() << std::endl;
 }
 
 

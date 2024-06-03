@@ -1,8 +1,11 @@
 #pragma once
 
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include <string>
 #include <memory>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "Enums.h"
 #include "Shader.h"
@@ -41,11 +44,7 @@ struct cTransform : Component
 	glm::vec3	front			= { 0.0f, 0.0f, 1.0f };
 	glm::vec3	up				= { 0.0f, 1.0f, 0.0f };
 	glm::vec3	right;
-	float		yaw				= -90.0f;
-	float		pitch			= 0.0f;
-	float		eulerX			= 0.0f;
-	float		eulerY			= 0.0f;
-	float		eulerZ			= 0.0f;
+	glm::quat   orientation		= { glm::vec3(0.0, 0.0, 0.0) };
 
 	cTransform()
 	{
@@ -87,7 +86,8 @@ struct cInput : Component
 
 struct cCamera : Component
 {
-	bool		isMainCamera = true;
+	float		yaw				 = -90.0f;
+	float		pitch			 = 0.0f;
 	glm::vec3	relativePosition = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	cCamera() 

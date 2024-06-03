@@ -89,8 +89,8 @@ class MemoryPool
 public:
 
 	// These can be set before initialization.
-	static unsigned int MAX_ENTITIES;
-	static unsigned int MEMORY_RESIZE_AMOUNT;
+	static const unsigned int MAX_ENTITIES;
+	static const unsigned int MEMORY_RESIZE_AMOUNT;
 
 	// MemoryPool is a singleton.
 	static MemoryPool& Instance()

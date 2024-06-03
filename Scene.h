@@ -22,6 +22,6 @@ public:
 	std::string name;
 
 private:
-	glm::vec3 addedVelocity{ 0.0f, 0.0f, 0.0f };
+	float moveSpeed = 2.0f;
 };
 

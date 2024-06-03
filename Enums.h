@@ -28,7 +28,11 @@ enum class ActionType
 	STRAFE_LEFT1,
 	MOVE_UP1,
 	MOVE_DOWN1,
-	TOGGLE_FLASHLIGHT
+	TOGGLE_FLASHLIGHT,
+	RUN,
+	ROTATE_X,
+	ROTATE_Y,
+	ROTATE_Z
 };
 
 enum class ActionEventType

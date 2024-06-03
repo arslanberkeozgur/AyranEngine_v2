@@ -14,7 +14,6 @@ void Scene::OnStartScene()
 {
 	Entity player = Engine::Instance().AddEntity("player");
 	player.addComponent<cTransform>(glm::vec3(0.0f, 0.0f, 4.0f));
-	player.getComponent<cTransform>().front = glm::vec3(0.0f, 0.0f, -1.0f);
 	player.addComponent<cInput>();
 	player.addComponent<cCamera>();
 	Engine::Instance().SetMainCamera(&player.getComponent<cCamera>());
@@ -27,6 +26,7 @@ void Scene::OnStartScene()
 	playerInput.BindAction(ActionType::MOVE_UP);
 	playerInput.BindAction(ActionType::MOVE_DOWN);
 	playerInput.BindAction(ActionType::TOGGLE_FLASHLIGHT);
+	playerInput.BindAction(ActionType::RUN);
 
 	Entity light = Engine::Instance().AddEntity("lightSource");
 	light.addComponent<cPointLight>();
@@ -51,26 +51,13 @@ void Scene::OnStartScene()
 		house.addComponent<cTransform>(glm::vec3(0.0f + i * 35.0f, 0.0f, 0.0f));
 	}
 
-	for (int i = 0; i < 10; ++i)
-	{
-		Entity house = Engine::Instance().AddEntity("house" + std::to_string(10 + i));
-		house.addComponent<cModel>(Engine::Instance().models[0]);
-		house.addComponent<cTransform>(glm::vec3(0.0f + i * 35.0f, 0.0f, 35.0f));
-		house.getComponent<cTransform>().eulerY = 180.0f;
-	}
-
-	for (int i = 0; i < 10; ++i)
-	{
-		Entity spotlight = Engine::Instance().AddEntity("spotlight" + std::to_string(i));
-		spotlight.addComponent<cTransform>(glm::vec3(10.0f + i * 35.0f, 10.0f, 10.0f));
-		spotlight.getComponent<cTransform>().front = glm::vec3(0.0f, -1.0f, 0.0f);
-		spotlight.addComponent<cSpotLight>();
-
-		Entity spotlight1 = Engine::Instance().AddEntity("spotlight" + std::to_string(10 + i));
-		spotlight1.addComponent<cTransform>(glm::vec3(10.0f + i * 35.0f, 10.0f, 20.0f));
-		spotlight1.getComponent<cTransform>().front = glm::vec3(0.0f, -1.0f, 0.0f);
-		spotlight1.addComponent<cSpotLight>();
-	}
+	Entity ashtray = Engine::Instance().AddEntity("ashtray");
+	ashtray.addComponent<cModel>(Engine::Instance().models[1]);
+	ashtray.addComponent<cTransform>(glm::vec3(1.0f, 1.4f, 2.0f));
+	ashtray.addComponent<cInput>();
+	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_X);
+	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Y);
+	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Z);
 
 	Engine::Instance().AddGlobalLight();
 
@@ -92,6 +79,10 @@ void Scene::BindActions()
 	Engine::Instance().BindInputKey(GLFW_KEY_P, ActionType::MOVE_UP1);
 	Engine::Instance().BindInputKey(GLFW_KEY_O, ActionType::MOVE_DOWN1);
 	Engine::Instance().BindInputKey(GLFW_KEY_F, ActionType::TOGGLE_FLASHLIGHT);
+	Engine::Instance().BindInputKey(GLFW_KEY_LEFT_SHIFT, ActionType::RUN);
+	Engine::Instance().BindInputKey(GLFW_KEY_V, ActionType::ROTATE_X);
+	Engine::Instance().BindInputKey(GLFW_KEY_B, ActionType::ROTATE_Y);
+	Engine::Instance().BindInputKey(GLFW_KEY_N, ActionType::ROTATE_Z);
 	
 	return;
 }
@@ -101,61 +92,77 @@ void Scene::DefineActions(Entity& e, Action& action)
 	if (e.hasComponent<cTransform>())
 	{
 		float deltaTime = float(Engine::Instance().deltaTime);
-		float inputMoveSpeed = Engine::Instance().inputMoveSpeed;
 		cTransform& entityTransform = e.getComponent<cTransform>();
-
+		
 		switch (action.type)
 		{
 		case ActionType::MOVE_FORWARD:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * entityTransform.front;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * entityTransform.front);
 			break;
 		case ActionType::MOVE_BACKWARD:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * entityTransform.front;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * entityTransform.front);
 			break;
 		case ActionType::STRAFE_LEFT:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * entityTransform.right;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * entityTransform.right);
 			break;
 		case ActionType::STRAFE_RIGHT:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * entityTransform.right;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * entityTransform.right);
 			break;
 		case ActionType::MOVE_UP:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * entityTransform.up;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * entityTransform.up);
 			break;
 		case ActionType::MOVE_DOWN:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * entityTransform.up;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * entityTransform.up);
 			break;
 		case ActionType::MOVE_FORWARD1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().front;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().front);
 			break;
 		case ActionType::MOVE_BACKWARD1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().front;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().front);
 			break;
 		case ActionType::STRAFE_LEFT1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().right;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().right);
 			break;
 		case ActionType::STRAFE_RIGHT1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().right;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().right);
 			break;
 		case ActionType::MOVE_UP1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity += float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().up;
+				Engine::Instance().ApplyVelocity(e, float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().up);
 			break;
 		case ActionType::MOVE_DOWN1:
 			if (action.eventType == ActionEventType::CONTINUE)
-				addedVelocity -= float(deltaTime) * inputMoveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().up;
+				Engine::Instance().ApplyVelocity(e, -float(deltaTime) * moveSpeed * Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>().up);
+			break;
+		case ActionType::RUN:
+			if (action.eventType == ActionEventType::BEGIN)
+				moveSpeed = 4;
+			else if (action.eventType == ActionEventType::END)
+				moveSpeed = 2;
+			break;
+		case ActionType::ROTATE_Y:
+			if (action.eventType == ActionEventType::CONTINUE)
+				Engine::Instance().AddGlobalRotation(e, glm::vec3(0.0f, 1.0f, 0.0f), 40.0f * deltaTime);
+			break;
+		case ActionType::ROTATE_X:
+			if (action.eventType == ActionEventType::CONTINUE)
+				Engine::Instance().AddGlobalRotation(e, glm::vec3(1.0f, 0.0f, 0.0f), 40.0f * deltaTime);
+			break;
+		case ActionType::ROTATE_Z:
+			if (action.eventType == ActionEventType::CONTINUE)
+				Engine::Instance().AddGlobalRotation(e, glm::vec3(0.0f, 0.0f, 1.0f), 40.0f * deltaTime);
 			break;
 		}
-		entityTransform.velocity = addedVelocity;
 	}
 
 	if (action.type == ActionType::TOGGLE_FLASHLIGHT && action.eventType == ActionEventType::BEGIN)
@@ -173,5 +180,4 @@ void Scene::DefineActions(Entity& e, Action& action)
 
 void Scene::OnUpdate()
 {
-	addedVelocity = glm::vec3(0.0f);
 }

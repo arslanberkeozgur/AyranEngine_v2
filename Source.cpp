@@ -35,25 +35,21 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos)
 
 	if (Engine::Instance().mainCamera)
 	{
-		Entity* cameraOwner = Engine::Instance().GetMainCameraOwner();
-		cTransform& cameraTransform = cameraOwner->getComponent<cTransform>();
-		cameraTransform.yaw += float(xOffset);
-		cameraTransform.pitch -= float(yOffset);
+		cCamera* camera = Engine::Instance().mainCamera;
+		cTransform& camTransform = Engine::Instance().GetMainCameraOwner()->getComponent<cTransform>();
+		camera->yaw += float(xOffset);
+		camera->pitch -= float(yOffset);
 		if (Engine::Instance().inputCameraConstrainPitch)
 		{
-			if (cameraTransform.pitch > 89.0f)
-				cameraTransform.pitch = 89.0f;
-			if (cameraTransform.pitch < -89.0f)
-				cameraTransform.pitch = -89.0f;
+			if (camera->pitch > 89.0f)
+				camera->pitch = 89.0f;
+			if (camera->pitch < -89.0f)
+				camera->pitch = -89.0f;
 		}
-		// calculate the new Front vector
-		glm::vec3 front;
-		front.x = cos(glm::radians(cameraTransform.yaw)) * cos(glm::radians(cameraTransform.pitch));
-		front.y = sin(glm::radians(cameraTransform.pitch));
-		front.z = sin(glm::radians(cameraTransform.yaw)) * cos(glm::radians(cameraTransform.pitch));
-		cameraTransform.front = glm::normalize(front);
-		// also re-calculate the Right and Up vector
-		cameraTransform.right = glm::normalize(glm::cross(cameraTransform.front, Engine::Instance().worldUp));
-		cameraTransform.up = glm::normalize(glm::cross(cameraTransform.right, cameraTransform.front));
+
+		glm::quat qPitch = glm::angleAxis(glm::radians(-camera->pitch), glm::vec3(1, 0, 0));
+		glm::quat qYaw = glm::angleAxis(glm::radians(camera->yaw), glm::vec3(0, 1, 0));
+		// omit roll
+		camTransform.orientation = glm::normalize(qPitch * qYaw);
 	}
 }

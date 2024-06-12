@@ -32,7 +32,8 @@ enum class ActionType
 	RUN,
 	ROTATE_X,
 	ROTATE_Y,
-	ROTATE_Z
+	ROTATE_Z,
+	USE
 };
 
 enum class ActionEventType
@@ -46,5 +47,6 @@ enum class ActionEventType
 enum class ShaderType
 {
 	DEFAULT,
-	LIGHT_SOURCE
+	LIGHT_SOURCE,
+	OUTLINE
 };

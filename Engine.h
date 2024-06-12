@@ -19,6 +19,7 @@ class EntityManager;
 class Entity;
 struct Component;
 class Model;
+struct cModel;
 
 typedef std::map<ShaderType, Shader> ShaderMap;
 typedef std::map<unsigned int, ActionType> ActionMap;
@@ -112,6 +113,7 @@ private:
 	void DefaultShaderUpdate();
 	void OnStartEngine();
 	void ProcessInput();
+	void ExecuteActions();
 	void ExecuteActions(Entity& e);
 
 public:
@@ -135,8 +137,15 @@ private:
 
 private:
 	void CalculateDeltaTime();
-	void ClearScreen(float r, float g, float b, float a);
+	void ClearScreen(float r = 0, float g = 0, float b = 0, float a = 0);
 	void Render();
+	void DrawEntity(Entity e);
+	void DrawOutlinedModel(Entity e, cModel& model);
+
+	std::vector<Entity> outlinedObjects;
+
+public:
+	float GetTimeSinceCreation() const;
 
 public:
 	void BindInputKey(unsigned int key, ActionType action);
@@ -145,9 +154,12 @@ public:
 	void OnEntityDestroy(Entity& e);
 	void OnAddComponent(const Component& e);
 	void OnRemoveComponent(const Component& e);
+	std::vector<Entity>& GetEntitiesWithTag(const std::string& tag);
 
 public:
 	void AddGlobalLight(const glm::vec3& direction = glm::vec3(0.3f, -1.0f, 0.3f), const glm::vec3& ambient = glm::vec3(0.1f), const glm::vec3& diffuse = glm::vec3(1.0f), const glm::vec3& specular = glm::vec3(1.0f));
+	void OutlineEntity(Entity e, glm::vec3 color = { 1.0f, 0.0f, 0.0f });
+	void RemoveOutline(Entity e);
 
 private:
 	void TransformEntities();

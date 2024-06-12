@@ -83,6 +83,8 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPosition, vec3 
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection);
 float LinearizeDepth(float depth);
 
+uniform float weirdEffect = 1.0f;
+
 void main()
 { 
     vec3 normal = normalize(Normal);
@@ -99,6 +101,9 @@ void main()
     {
         totalLight += CalculateSpotLight(spotLights[j], normal, FragPos, normalize(-FragPos));
     }
+
+    float HALF_SCREEN_WIDTH = 800.0f;
+    float HALF_SCREEN_HEIGHT = 450.0f;
 
     FragColor = vec4(totalLight, 1.0f);
 }

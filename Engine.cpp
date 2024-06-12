@@ -47,6 +47,7 @@ void Engine::Run()
 		entityManager->update();
 		ProcessInput();
 		if (activeScene) activeScene->OnUpdate();
+		ExecuteActions();
 		TransformEntities();
 		DefaultShaderUpdate();
 		Render();
@@ -87,13 +88,12 @@ void Engine::CreateWindow()
 void Engine::SetupShaders()
 {
 	shaderMap[ShaderType::DEFAULT].load("shaders/vertexShader.vert", "shaders/fragmentShader.frag");
-	shaderMap[ShaderType::LIGHT_SOURCE].load("shaders/lightVertexShader.vert", "shaders/lightFragmentShader.frag");
+	shaderMap[ShaderType::LIGHT_SOURCE].load("shaders/lightVertexShader.vert", "shaders/simpleColorFragmentShader.frag");
+	shaderMap[ShaderType::OUTLINE].load("shaders/lightVertexShader.vert", "shaders/simpleColorFragmentShader.frag");
 
 	activeShader = shaderMap[ShaderType::DEFAULT];
 
 	activeShader.use();
-	// TODO:
-	// This will need to change later once we add customizable materials.
 	activeShader.setFloat("material.shininess", 64.0f);
 	activeShader.setFloat("camInfo.near", nearFrustum);
 	activeShader.setFloat("camInfo.far", farFrustum);
@@ -113,6 +113,7 @@ void Engine::OnStartEngine()
 	}
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_STENCIL_TEST);
 
 	// Add default scene.
 	sceneMap["defaultScene"] = std::make_shared<Scene>("defaultScene");
@@ -209,8 +210,7 @@ void Engine::CalculatePointLights(Shader& shader)
 			shader.setFloat("pointLights[" + std::to_string(currentPointLight) + "].constant", light.constant);
 			shader.setFloat("pointLights[" + std::to_string(currentPointLight) + "].linear", light.linear);
 			shader.setFloat("pointLights[" + std::to_string(currentPointLight) + "].quadratic", light.quadratic);
-			glm::vec4 lightPos = view * glm::vec4(e.getComponent<cTransform>().position, 1.0f);
-			shader.setFVec3("pointLights[" + std::to_string(currentPointLight) + "].position", glm::vec3(lightPos.x, lightPos.y, lightPos.z));
+			shader.setFVec3("pointLights[" + std::to_string(currentPointLight) + "].position", TransformPositionVectorToViewSpace(e.getComponent<cTransform>().position));
 			++currentPointLight;
 		}
 	}
@@ -219,49 +219,59 @@ void Engine::CalculatePointLights(Shader& shader)
 void Engine::Render()
 {
 	ClearScreen(0.1f, 0.1f, 0.1f, 0.1f);
+
 	for (Entity& e : entityManager->getEntities())
 	{
-		if (!(e.hasComponent<cShader>()))
+		if (e.hasComponent<cModel>() && !e.getComponent<cModel>().isOutlined && e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
-			activeShader = shaderMap[ShaderType::DEFAULT];
-			activeShader.use();
+			DrawEntity(e);
 		}
-		else 
-		{
-			activeShader = e.getComponent<cShader>().shader;
-			activeShader.use();
-			activeShader.setFMat4("view", view);
-			activeShader.setFMat4("projection", projection);
-			activeShader.setFVec3("color", glm::vec3(glm::abs(glm::sin(2 * currentTime)), 0.0f, 0.0f));
-		}
+	}
 
-		ExecuteActions(e);
-
+	for (Entity& e : outlinedObjects)
+	{
 		if (e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
-			glm::mat4 translationMatrix = glm::mat4(1.0f);
-			translationMatrix = glm::translate(translationMatrix, e.getComponent<cTransform>().position);
-			glm::mat4 scaleMatrix = glm::mat4(1.0f);
-			scaleMatrix = glm::scale(scaleMatrix, e.getComponent<cTransform>().scale);
-			glm::mat4 rotationMatrix = glm::toMat4(e.getComponent<cTransform>().orientation);
-			
-
-			glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
-			activeShader.setFMat4("model", model);
-
-			// Calculate the normal matrix
-			glm::mat3 normal = glm::transpose(glm::inverse(view * model));
-			activeShader.setFMat3("normalMatrix", normal);
-
-			if (e.hasComponent<cModel>())
-			{
-				e.getComponent<cModel>().model->Draw(activeShader);
-			}
+			glStencilMask(0xFF);
+			glStencilFunc(GL_ALWAYS, 1, 0xFF);
+			DrawEntity(e);
+			DrawOutlinedModel(e, e.getComponent<cModel>());
 		}
 	}
 
 	glfwPollEvents();
 	glfwSwapBuffers(window);
+}
+
+void Engine::DrawEntity(Entity e)
+{
+	if (!(e.hasComponent<cShader>()))
+	{
+		activeShader = shaderMap[ShaderType::DEFAULT];
+		activeShader.use();
+	}
+	else
+	{
+		activeShader = e.getComponent<cShader>().shader;
+		activeShader.use();
+		activeShader.setFMat4("view", view);
+		activeShader.setFMat4("projection", projection);
+	}
+
+	glm::mat4 translationMatrix = glm::mat4(1.0f);
+	translationMatrix = glm::translate(translationMatrix, e.getComponent<cTransform>().position);
+	glm::mat4 scaleMatrix = glm::mat4(1.0f);
+	scaleMatrix = glm::scale(scaleMatrix, e.getComponent<cTransform>().scale);
+	glm::mat4 rotationMatrix = glm::toMat4(e.getComponent<cTransform>().orientation);
+	glm::mat4 model = translationMatrix * rotationMatrix * scaleMatrix;
+	activeShader.setFMat4("model", model);
+
+	// Calculate the normal matrix
+	glm::mat3 normal = glm::transpose(glm::inverse(view * model));
+	activeShader.setFMat3("normalMatrix", normal);
+
+	cModel& entityModel = e.getComponent<cModel>();
+	entityModel.model->Draw(activeShader);
 }
 
 void Engine::ProcessInput()
@@ -299,18 +309,26 @@ void Engine::ProcessInput()
 	}
 }
 
+void Engine::ExecuteActions()
+{
+	for (Entity& e : entityManager->getEntities())
+	{
+		if (e.hasComponent<cInput>())
+		{
+			ExecuteActions(e);
+		}
+	}
+}
+
 void Engine::ExecuteActions(Entity& e)
 {
-	if (e.hasComponent<cInput>())
+	for (ActionType actionType : e.getComponent<cInput>().actions)
 	{
-		for (ActionType actionType : e.getComponent<cInput>().actions)
-		{
-			// Loop over all the defined actions of the entity. If any of the defined actions are currently registered, 
-			// pass it to the active scene's definition of the action.
-			auto it = std::find_if(registeredActions.begin(), registeredActions.end(), [actionType](Action& a) {return a.type == actionType; });
-			bool found = (it == registeredActions.end()) ? false : true;
-			if (found) activeScene->DefineActions(e, (*it));
-		}
+		// Loop over all the defined actions of the entity. If any of the defined actions are currently registered, 
+		// pass it to the active scene's definition of the action.
+		auto it = std::find_if(registeredActions.begin(), registeredActions.end(), [actionType](Action& a) {return a.type == actionType; });
+		bool found = (it == registeredActions.end()) ? false : true;
+		if (found) activeScene->DefineActions(e, (*it));
 	}
 }
 
@@ -324,9 +342,12 @@ void Engine::TransformEntities()
 			transform.position += transform.velocity;
 			transform.velocity = glm::vec3(0.0f);
 
-			transform.front = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 0.0, -1.0)));
-			transform.up = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 1.0, 0.0)));
-			transform.right = glm::cross(transform.front, transform.up);
+			if (transform.allowRotation)
+			{
+				transform.front = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 0.0, -1.0)));
+				transform.up = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 1.0, 0.0)));
+				transform.right = glm::cross(transform.front, transform.up);
+			}
 		}
 	}
 }
@@ -398,6 +419,11 @@ void Engine::OnRemoveComponent(const Component& component)
 	if (component.type == ComponentType::SPOT_LIGHT) --sceneNumOfSpotLights;
 }
 
+std::vector<Entity>& Engine::GetEntitiesWithTag(const std::string& tag)
+{
+	return entityManager->getEntitiesWithTag(tag);
+}
+
 void Engine::AddGlobalLight(const glm::vec3& direction, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular)
 {
 	globalLightDirection = direction;
@@ -437,7 +463,10 @@ void Engine::CalculateDeltaTime()
 void Engine::ClearScreen(float r, float g, float b, float a)
 {
 	glClearColor(r, g, b, a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	glStencilMask(0x00);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF);
 }
 
 glm::vec3 Engine::TransformPositionVectorToViewSpace(const glm::vec3& v)
@@ -450,6 +479,66 @@ glm::vec3 Engine::TransformDirectionalVectorToViewSpace(const glm::vec3& v)
 {
 	glm::vec4 dir4 = glm::transpose(glm::inverse(view)) * glm::vec4(v, 0.0f);
 	return glm::vec3(dir4.x, dir4.y, dir4.z);
+}
+
+void Engine::DrawOutlinedModel(Entity e, cModel& model)
+{
+	Shader previousShader = activeShader;
+	activeShader = shaderMap[ShaderType::OUTLINE];
+	glm::mat4 translationMatrix = glm::mat4(1.0f);
+	translationMatrix = glm::translate(translationMatrix, e.getComponent<cTransform>().position);
+	glm::mat4 scaleMatrix = glm::mat4(1.0f);
+	scaleMatrix = glm::scale(scaleMatrix, 1.1f * e.getComponent<cTransform>().scale);
+	glm::mat4 rotationMatrix = glm::toMat4(e.getComponent<cTransform>().orientation);
+	glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+	activeShader.use();
+	activeShader.setFMat4("model", modelMatrix);
+	activeShader.setFVec3("color", model.outlineColor);
+	activeShader.setFMat4("view", view);
+	activeShader.setFMat4("projection", projection);
+
+	glStencilMask(0x00);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glDisable(GL_DEPTH_TEST);
+	model.model->Draw(activeShader);
+	activeShader = previousShader;
+	activeShader.use();
+	glStencilMask(0xFF);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Engine::OutlineEntity(Entity e, glm::vec3 color)
+{
+	if (e.hasComponent<cTransform>() && e.hasComponent<cModel>())
+	{
+		cModel& model = e.getComponent<cModel>();
+		model.isOutlined = true;
+		model.outlineColor = color;
+		outlinedObjects.push_back(e);
+	}
+	else
+		std::cout << "WARNING::Attempting to outline an object with no cTransform and/or cModel component." << std::endl;
+}
+
+void Engine::RemoveOutline(Entity e)
+{
+	if (e.hasComponent<cTransform>() && e.hasComponent<cModel>())
+	{
+		e.getComponent<cModel>().isOutlined = false;
+		auto result = std::remove_if(outlinedObjects.begin(), outlinedObjects.end(), [e](Entity& entity) {return entity.getID() == e.getID(); });
+		outlinedObjects.erase(result, outlinedObjects.end());
+	}
+	else 
+		std::cout << "WARNING::Attempting to outline an object with no cTransform and/or cModel component." << std::endl;
+}
+
+
+// Getter Functions 
+
+float Engine::GetTimeSinceCreation() const
+{
+	return currentTime;
 }
 
 Engine::~Engine()

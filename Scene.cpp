@@ -59,7 +59,15 @@ void Scene::OnStartScene()
 	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Y);
 	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Z);
 
-	Engine::Instance().AddGlobalLight();
+	Engine::Instance().OutlineEntity(ashtray, glm::vec3(0.0f, 0.5f, 0.8f));
+
+	Entity ashtray1 = Engine::Instance().AddEntity("ashtray1");
+	ashtray1.addComponent<cModel>(Engine::Instance().models[1]);
+	ashtray1.addComponent<cTransform>(glm::vec3(1.3f, 1.4f, 2.0f));
+
+	Engine::Instance().OutlineEntity(ashtray1, glm::vec3(0.0f, 0.5f, 0.8f));
+
+	//Engine::Instance().AddGlobalLight();
 
 	return;
 }
@@ -93,7 +101,7 @@ void Scene::DefineActions(Entity& e, Action& action)
 	{
 		float deltaTime = float(Engine::Instance().deltaTime);
 		cTransform& entityTransform = e.getComponent<cTransform>();
-		
+
 		switch (action.type)
 		{
 		case ActionType::MOVE_FORWARD:
@@ -180,4 +188,5 @@ void Scene::DefineActions(Entity& e, Action& action)
 
 void Scene::OnUpdate()
 {
+
 }

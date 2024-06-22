@@ -12,8 +12,9 @@ Scene::Scene(const std::string& Name): name{Name} {}
 
 void Scene::OnStartScene()
 {
+
 	Entity player = Engine::Instance().AddEntity("player");
-	player.addComponent<cTransform>(glm::vec3(0.0f, 0.0f, 4.0f));
+	player.addComponent<cTransform>(glm::vec3(10.0f, 2.0f, 4.0f));
 	player.addComponent<cInput>();
 	player.addComponent<cCamera>();
 	Engine::Instance().SetMainCamera(&player.getComponent<cCamera>());
@@ -47,25 +48,19 @@ void Scene::OnStartScene()
 	for (int i = 0; i < 10; ++i)
 	{
 		Entity house = Engine::Instance().AddEntity("house" + std::to_string(i));
-		house.addComponent<cModel>(Engine::Instance().models[0]);
+		house.addComponent<cModel>(Engine::Instance().models["house"]);
 		house.addComponent<cTransform>(glm::vec3(0.0f + i * 35.0f, 0.0f, 0.0f));
 	}
 
 	Entity ashtray = Engine::Instance().AddEntity("ashtray");
-	ashtray.addComponent<cModel>(Engine::Instance().models[1]);
+	ashtray.addComponent<cModel>(Engine::Instance().models["ashtray"]);
 	ashtray.addComponent<cTransform>(glm::vec3(1.0f, 1.4f, 2.0f));
 	ashtray.addComponent<cInput>();
 	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_X);
 	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Y);
 	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Z);
 
-	Engine::Instance().OutlineEntity(ashtray, glm::vec3(0.0f, 0.5f, 0.8f));
-
-	Entity ashtray1 = Engine::Instance().AddEntity("ashtray1");
-	ashtray1.addComponent<cModel>(Engine::Instance().models[1]);
-	ashtray1.addComponent<cTransform>(glm::vec3(1.3f, 1.4f, 2.0f));
-
-	Engine::Instance().OutlineEntity(ashtray1, glm::vec3(0.0f, 0.5f, 0.8f));
+	//Engine::Instance().OutlineEntity(ashtray, glm::vec3(0.0f, 0.5f, 0.8f));
 
 	//Engine::Instance().AddGlobalLight();
 

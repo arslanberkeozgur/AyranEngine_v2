@@ -5,12 +5,13 @@
 #include <iostream>
 #include <sstream>
 
+
 Texture2D::Texture2D()
-	: horizontalWrapMode{GL_REPEAT}, verticalWrapMode{GL_REPEAT}, 
+	: horizontalWrapMode{GL_REPEAT}, verticalWrapMode{ GL_REPEAT },
 	minFilter{GL_LINEAR_MIPMAP_LINEAR}, magFilter{GL_LINEAR}
 {}
 
-bool Texture2D::load(const std::string& path)
+bool Texture2D::load(const std::string& path, TextureInfo& info)
 {
 	this->path = path;
 
@@ -45,6 +46,7 @@ bool Texture2D::load(const std::string& path)
 		break;
 	case 4:
 		format = GL_RGBA;
+		info.alphaChannel = true;
 		break;
 	default:
 		std::cout << "Texture of unknown format at path : " << path << std::endl;
@@ -65,28 +67,36 @@ bool Texture2D::load(const std::string& path)
 	return true;
 }
 
-void Texture2D::use(unsigned int i) const
+void Texture2D::use() const
 {
-	glActiveTexture(GL_TEXTURE0 + i);
+	glActiveTexture(GL_TEXTURE0 + textureID);
 	glBindTexture(GL_TEXTURE_2D, ID);
 }
 
 void Texture2D::setHorizontalWrapMode(GLenum mode)
 {
 	horizontalWrapMode = mode;
+	use();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, horizontalWrapMode);
 }
 
 void Texture2D::setVerticalWrapMode(GLenum mode)
 {
 	verticalWrapMode = mode;
+	use();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, verticalWrapMode);
 }
 
 void Texture2D::setMinFilter(GLenum filter)
 {
 	minFilter = filter;
+	use();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
 }
 
 void Texture2D::setMagFilter(GLenum filter)
 {
 	magFilter = filter;
+	use();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
 }

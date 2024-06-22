@@ -9,6 +9,11 @@ Mesh::Mesh(std::vector<Vertex> Vertices,std::vector<unsigned int> Indices, std::
 	: vertices{ Vertices }, indices{ Indices }, textures{ Textures }
 {
 	setupMesh();
+
+	for (int i = 0; i < textures.size(); ++i)
+	{
+		textures[i].textureID = i;
+	}
 }
 
 void Mesh::setupMesh()
@@ -65,14 +70,14 @@ void Mesh::Draw(Shader& shader)
 		}
 
 		shader.setuInt(("material." + name + number).c_str(), i);
-		textures[i].use(i);
+		textures[i].use();
 	}
 
 	if (textures.size() == 0)
 	{
 		// Use default texture if the mesh contains no textures.
 		shader.setuInt("material.diffuse1", 0);
-		Engine::Instance().defaultTexture.use(0);
+		Engine::Instance().defaultTexture.use();
 	}
 
 	// This sets the active texture to default so that in future we get nothing unexpected.

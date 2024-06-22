@@ -129,7 +129,9 @@ std::vector<Texture2D> Model::loadMaterialTextures(aiMaterial* mat, aiTextureTyp
 		if (!skip)
 		{
 			Texture2D texture;
-			texture.load(directory + '/' + std::string(path.C_Str()));
+			TextureInfo info;
+			texture.load(directory + '/' + std::string(path.C_Str()), info);
+			isTransparent = true;
 			texture.type = engineType;
 			texture.path = path.C_Str();
 			textures.push_back(texture);
@@ -138,6 +140,21 @@ std::vector<Texture2D> Model::loadMaterialTextures(aiMaterial* mat, aiTextureTyp
 	}
 	return textures;
 }
+
+void Model::ApplyOptionToAllTextures(TextureRenderOption option)
+{
+	for (Mesh& mesh : meshes)
+	{
+		for (Texture2D& texture : mesh.textures)
+		{
+			texture.setHorizontalWrapMode(option.horizontalWrapMode);
+			texture.setVerticalWrapMode(option.verticalWrapMode);
+			texture.setMinFilter(option.minFilter);
+			texture.setMagFilter(option.magFilter);
+		}
+	}
+}
+
 
 Model::~Model()
 {

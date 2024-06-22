@@ -72,12 +72,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>lib\glfw;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
+    <LibraryPath>lib\glfw\Release;lib\glfw\Debug;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>lib\glfw;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
+    <LibraryPath>lib\glfw\Release;lib\glfw\Debug;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -148,7 +148,6 @@
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
-    <ClInclude Include="Primitives.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="stb_image.h" />
@@ -160,7 +159,6 @@
     <ClCompile Include="MemoryPool.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
-    <ClCompile Include="Primitives.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Source.cpp" />

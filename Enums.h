@@ -50,3 +50,8 @@ enum class ShaderType
 	LIGHT_SOURCE,
 	OUTLINE
 };
+
+enum class Primitive
+{
+	QUAD
+};

@@ -101,11 +101,16 @@ void Engine::SetupShaders()
 
 void Engine::OnStartEngine()
 {
-	defaultTexture.load("textures/white.jpg");
+	TextureInfo info;
+	defaultTexture.load("textures/white.jpg", info);
 	defaultTexture.type = TextureType::DIFFUSE;
 
-	models.push_back(std::make_shared<Model>("models/house/house.obj"));
-	models.push_back(std::make_shared<Model>("models/ashtray/ashtray.obj"));
+	models["house"] = std::make_shared<Model>("models/house/house.obj", "house");
+	models["ashtray"] = std::make_shared<Model>("models/ashtray/ashtray.obj", "ashtray");
+	models["grass"] = std::make_shared<Model>("models/grass/grass.obj", "grass");
+	models["transparent_window"] = std::make_shared<Model>("models/transparent_window/transparent_window.obj", "transparent_window");
+	
+	primitiveModels[Primitive::QUAD] = std::make_shared<Model>("models/primitives/quad.obj", "quad");
 
 	if (WIREFRAME)
 	{
@@ -123,6 +128,8 @@ void Engine::OnStartEngine()
 	activeScene->OnStartScene();
 
 	entityManager->update();
+
+	InitializeCamera();
 }
 
 void Engine::DefaultShaderUpdate()
@@ -218,11 +225,20 @@ void Engine::CalculatePointLights(Shader& shader)
 
 void Engine::Render()
 {
+	if (!BLEND)
+		NormalRender();
+	else
+		BlendRender();
+}
+
+void Engine::NormalRender()
+{
 	ClearScreen(0.1f, 0.1f, 0.1f, 0.1f);
 
 	for (Entity& e : entityManager->getEntities())
 	{
-		if (e.hasComponent<cModel>() && !e.getComponent<cModel>().isOutlined && e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
+		if (e.hasComponent<cModel>() && !e.getComponent<cModel>().isOutlined
+			&& e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
 			DrawEntity(e);
 		}
@@ -237,6 +253,54 @@ void Engine::Render()
 			DrawEntity(e);
 			DrawOutlinedModel(e, e.getComponent<cModel>());
 		}
+	}
+
+	glfwPollEvents();
+	glfwSwapBuffers(window);
+}
+
+//  Currently outlining and blending work very weirdly together.
+//  Don't outline a transparent object.
+void Engine::BlendRender()
+{
+	ClearScreen(0.1f, 0.1f, 0.1f, 0.1f);
+
+	blendMap.clear();
+
+	for (Entity& e : entityManager->getEntities())
+	{
+		if (e.hasComponent<cModel>() && e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
+		{
+			if (e.getComponent<cModel>().model->isTransparent && mainCamera)
+			{
+				float distance = glm::distance(
+					GetMainCameraOwner()->getComponent<cTransform>().position, 
+					e.getComponent<cTransform>().position
+				);
+				blendMap[distance] = &e;
+			}
+
+			if (!e.getComponent<cModel>().isOutlined && !e.getComponent<cModel>().model->isTransparent)
+			{
+				DrawEntity(e);
+			}
+		}
+	}
+
+	for (Entity& e : outlinedObjects)
+	{
+		if (e.hasComponent<cTransform>() && !e.hasComponent<cCamera>() && !e.getComponent<cModel>().model->isTransparent)
+		{
+			glStencilMask(0xFF);
+			glStencilFunc(GL_ALWAYS, 1, 0xFF);
+			DrawEntity(e);
+			DrawOutlinedModel(e, e.getComponent<cModel>());
+		}
+	}
+
+	for (BlendMap::reverse_iterator it = blendMap.rbegin(); it != blendMap.rend(); ++it)
+	{
+			DrawEntity(*(it->second));
 	}
 
 	glfwPollEvents();
@@ -401,6 +465,20 @@ void Engine::SetMainCamera(cCamera* camera)
 	mainCamera = camera;
 }
 
+void Engine::InitializeCamera()
+{
+	if (mainCamera)
+	{
+		glm::quat qPitch = glm::angleAxis(glm::radians(-mainCamera->pitch), glm::vec3(1, 0, 0));
+		glm::quat qYaw = glm::angleAxis(glm::radians(mainCamera->yaw), glm::vec3(0, 1, 0));
+		cTransform& transform = GetMainCameraOwner()->getComponent<cTransform>();
+		transform.orientation = glm::normalize(qPitch * qYaw);
+		transform.front = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 0.0, -1.0)));
+		transform.up = glm::normalize(glm::rotate(glm::inverse(transform.orientation), glm::vec3(0.0, 1.0, 0.0)));
+		transform.right = glm::cross(transform.front, transform.up);
+	}
+}
+
 void Engine::OnEntityDestroy(Entity& e)
 {
 	if (e.hasComponent<cPointLight>()) --sceneNumOfPointLights;
@@ -533,10 +611,22 @@ void Engine::RemoveOutline(Entity e)
 		std::cout << "WARNING::Attempting to outline an object with no cTransform and/or cModel component." << std::endl;
 }
 
+void Engine::SetBlending(bool blend, GLenum sourceFactor, GLenum destinationFactor)
+{
+	BLEND = blend;
+	if (blend)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(sourceFactor, destinationFactor);
+	}
+	else
+		glDisable(GL_BLEND);
+}
+
 
 // Getter Functions 
 
-float Engine::GetTimeSinceCreation() const
+double Engine::GetTimeSinceCreation() const
 {
 	return currentTime;
 }

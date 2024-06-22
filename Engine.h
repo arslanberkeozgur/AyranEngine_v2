@@ -24,6 +24,9 @@ struct cModel;
 typedef std::map<ShaderType, Shader> ShaderMap;
 typedef std::map<unsigned int, ActionType> ActionMap;
 typedef std::map<std::string, std::shared_ptr<Scene>> SceneMap;
+typedef std::map<std::string, std::shared_ptr<Model>> ModelMap;
+typedef std::map<Primitive, std::shared_ptr<Model>> PrimitiveModelMap;
+typedef std::map<float, Entity*> BlendMap;
 
 class Engine
 {
@@ -67,7 +70,10 @@ public:
 	SceneMap						sceneMap;
 	std::shared_ptr<Scene>			activeScene						= nullptr;
 
-	std::vector<std::shared_ptr<Model>> models;
+	ModelMap						models;
+	PrimitiveModelMap				primitiveModels;
+
+	BlendMap						blendMap;
 
 private:
 
@@ -89,6 +95,8 @@ private:
 	glm::vec3				globalLightAmbient				= { 0.0f, 0.0f, 0.0f };
 	glm::vec3				globalLightDiffuse				= { 0.0f, 0.0f, 0.0f };
 	glm::vec3				globalLightSpecular				= { 0.0f, 0.0f, 0.0f };
+
+	bool					BLEND							= false;
 
 public:
 	void Run();
@@ -139,13 +147,15 @@ private:
 	void CalculateDeltaTime();
 	void ClearScreen(float r = 0, float g = 0, float b = 0, float a = 0);
 	void Render();
+	void NormalRender();
+	void BlendRender();
 	void DrawEntity(Entity e);
 	void DrawOutlinedModel(Entity e, cModel& model);
 
 	std::vector<Entity> outlinedObjects;
 
 public:
-	float GetTimeSinceCreation() const;
+	double GetTimeSinceCreation() const;
 
 public:
 	void BindInputKey(unsigned int key, ActionType action);
@@ -160,7 +170,9 @@ public:
 	void AddGlobalLight(const glm::vec3& direction = glm::vec3(0.3f, -1.0f, 0.3f), const glm::vec3& ambient = glm::vec3(0.1f), const glm::vec3& diffuse = glm::vec3(1.0f), const glm::vec3& specular = glm::vec3(1.0f));
 	void OutlineEntity(Entity e, glm::vec3 color = { 1.0f, 0.0f, 0.0f });
 	void RemoveOutline(Entity e);
+	void SetBlending(bool blend, GLenum sourceFactor = GL_SRC_ALPHA, GLenum destinationFactor = GL_ONE_MINUS_SRC_ALPHA);
 
 private:
 	void TransformEntities();
+	void InitializeCamera();
 };

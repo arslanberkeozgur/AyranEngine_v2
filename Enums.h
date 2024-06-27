@@ -32,7 +32,19 @@ enum class ActionType
 	RUN,
 	ROTATE_X,
 	ROTATE_Y,
-	ROTATE_Z
+	ROTATE_Z,
+	USE,
+	SELECT,
+	SELECT_0,
+	SELECT_1,
+	SELECT_2,
+	SELECT_3,
+	SELECT_4,
+	SELECT_5,
+	SELECT_6,
+	SELECT_7,
+	SELECT_8,
+	SELECT_9
 };
 
 enum class ActionEventType
@@ -46,5 +58,23 @@ enum class ActionEventType
 enum class ShaderType
 {
 	DEFAULT,
-	LIGHT_SOURCE
+	LIGHT_SOURCE,
+	OUTLINE,
+	POST_PROCESSING_DEFAULT,
+	COLOR_INVERSION,
+	GRAYSCALE,
+	SHARPEN,
+	BLUR,
+	EDGE_DETECTION,
+	CUSTOM_EFFECT
+};
+
+enum class Primitive
+{
+	QUAD
+};
+
+enum class FramebufferType
+{
+	POST_PROCESSING
 };

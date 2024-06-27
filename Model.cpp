@@ -23,13 +23,55 @@ void Model::loadModel(const std::string& path)
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		std::cout << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
+		std::cout << "ERROR::ASSIMP::MODEL::NAME::" << name << "::" << importer.GetErrorString() << std::endl;
 		return;
 	}
 
 	directory = path.substr(0, path.find_last_of('/'));
 
 	processNode(scene->mRootNode, scene);
+
+	// Determine cullability.
+	if (meshes.size() == 1)
+	{
+		// If the model has more than one mesh, it is cullable.
+		if (meshes[0].vertices.size() < 4)
+		{
+			// If the model's only mesh has less than 4 vertices, it is guaranteed to be a plane and not cullable.
+
+			std::cout << "The model '" << name << "' is not cullable because it has less than 4 vertices." << std::endl;
+
+			isCullable = false;
+			return;
+		}
+		else
+		{
+			// Determine whether all points lie on a plane.
+			glm::vec3 v1 = meshes[0].vertices[1].Position - meshes[0].vertices[0].Position;
+			glm::vec3 v2 = meshes[0].vertices[2].Position - meshes[0].vertices[0].Position;
+			glm::vec3 compare = glm::normalize(glm::cross(v1, v2));
+
+			for (unsigned int i = 3; i < meshes[0].vertices.size(); ++i)
+			{
+				glm::vec3 v3 = meshes[0].vertices[i].Position - meshes[0].vertices[0].Position;
+				glm::vec3 cross = glm::normalize(glm::cross(v1, v3));
+
+				if (cross != compare && cross != -compare)
+				{
+					// The vertices don't constitute a plane. 
+					// We pretend for now that such models are cullable.
+					std::cout << "The model '" << name << "' is cullable because some of its vertices lie on different planes." << std::endl;
+					return;
+				}
+			}
+			// All the vertices lie on the same plane.
+			std::cout << "The model '" << name << "' is not cullable because all its vertices lie on the same plane." << std::endl;
+			isCullable = false;
+			return;
+		}
+	}
+
+	std::cout << "The model '" << name << "' is cullable." << std::endl;
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene)
@@ -129,7 +171,9 @@ std::vector<Texture2D> Model::loadMaterialTextures(aiMaterial* mat, aiTextureTyp
 		if (!skip)
 		{
 			Texture2D texture;
-			texture.load(directory + '/' + std::string(path.C_Str()));
+			TextureInfo info;
+			texture.load(directory + '/' + std::string(path.C_Str()), info);
+			isTransparent = true;
 			texture.type = engineType;
 			texture.path = path.C_Str();
 			textures.push_back(texture);
@@ -139,6 +183,29 @@ std::vector<Texture2D> Model::loadMaterialTextures(aiMaterial* mat, aiTextureTyp
 	return textures;
 }
 
+void Model::ApplyOptionToAllTextures(TextureRenderOption option)
+{
+	for (Mesh& mesh : meshes)
+	{
+		for (Texture2D& texture : mesh.textures)
+		{
+			texture.setHorizontalWrapMode(option.horizontalWrapMode);
+			texture.setVerticalWrapMode(option.verticalWrapMode);
+			texture.setMinFilter(option.minFilter);
+			texture.setMagFilter(option.magFilter);
+		}
+	}
+}
+
+void Model::ApplyTexture(Texture2D texture)
+{
+	for (Mesh& mesh : meshes)
+	{
+		mesh.textures.push_back(texture);
+	}
+}
+
+
 Model::~Model()
 {
 	for (int i = 0; i < meshes.size(); ++i)
@@ -146,5 +213,9 @@ Model::~Model()
 		glDeleteVertexArrays(1, &(meshes[i].getVAO()));
 		glDeleteBuffers(1, &(meshes[i].getVBO()));
 		glDeleteBuffers(1, &(meshes[i].getEBO()));
+	}
+	for (int i = 0; i < texturesLoaded.size(); ++i)
+	{
+		glDeleteTextures(1, &(texturesLoaded[i].ID));
 	}
 }

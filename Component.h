@@ -162,7 +162,9 @@ struct cSpotLight : Component
 
 struct cModel : Component
 {
-	std::shared_ptr<Model> model = nullptr;
+	std::shared_ptr<Model> model		= nullptr;
+	bool				   isOutlined   = false;
+	glm::vec3			   outlineColor = { 0.0f, 0.0f, 0.0f };
 	
 	cModel() 
 	{

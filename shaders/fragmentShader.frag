@@ -81,7 +81,6 @@ uniform CamInfo camInfo;
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection);
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection);
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection);
-float LinearizeDepth(float depth);
 
 void main()
 { 
@@ -100,31 +99,32 @@ void main()
         totalLight += CalculateSpotLight(spotLights[j], normal, FragPos, normalize(-FragPos));
     }
 
-    FragColor = vec4(totalLight, 1.0f);
+    vec4 texColor = texture(material.texture_diffuse1, TexCoords);
+    FragColor = vec4(totalLight, 1.0f) * texColor;
 }
 
 vec3 CalculateDirectionalLight(DirectionalLight light, vec3 normal, vec3 viewDirection)
 {   
-    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 ambient = light.ambient;
 
     vec3 lightDirection = normalize(-light.direction);
-    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse;
 
     vec3 reflectDirection = reflect(-lightDirection, normal);
-    vec3 specular = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess) * light.specular * vec3(texture(material.texture_specular1, TexCoords));
+    vec3 specular = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess) * light.specular;
 
     return (ambient + diffuse + specular);
 }
 
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection)
 {
-    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 ambient = light.ambient;
 
     vec3 lightDirection = normalize(light.position - fragPosition);
-    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse;
 
     vec3 reflectDirection = reflect(-lightDirection, normal);
-    vec3 specular = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess) * light.specular * vec3(texture(material.texture_specular1, TexCoords));
+    vec3 specular = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess) * light.specular;
 
     float distance = length(light.position - fragPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
@@ -134,7 +134,7 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPosition, vec3 
 
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 viewDirection)
 {
-    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 ambient = light.ambient;
 
     float epsilon = light.cutOff - light.outerCutoff;
 
@@ -143,19 +143,13 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPosition, vec3 vi
 
     float intensity = clamp((cosTheta - light.outerCutoff) / epsilon, 0.0f, 1.0f);
 
-    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse * vec3(texture(material.texture_diffuse1, TexCoords));
+    vec3 diffuse = max(dot(normal, lightDirection), 0.0) * light.diffuse;
 
     vec3 reflectDirection = reflect(-lightDirection, normal);
-    vec3 specular = pow(max(dot(lightDirection, reflectDirection), 0.0), material.shininess) * light.specular * vec3(texture(material.texture_specular1, TexCoords));
+    vec3 specular = pow(max(dot(lightDirection, reflectDirection), 0.0), material.shininess) * light.specular;
 
     float distance = length(light.position - fragPosition);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * distance * distance);
 
     return intensity * attenuation * (ambient + diffuse + specular);
-}
-
-float LinearizeDepth(float depth)
-{
-    float z = depth * 2.0f - 1.0f;
-    return (2.0f * camInfo.near * camInfo.far) / (camInfo.far + camInfo.near - z * (camInfo.far - camInfo.near));
 }

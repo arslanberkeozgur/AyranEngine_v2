@@ -72,12 +72,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>lib\glfw;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
+    <LibraryPath>lib\glfw\Release;lib\glfw\Debug;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>lib\glfw;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
+    <LibraryPath>lib\glfw\Release;lib\glfw\Debug;lib\assimp\Debug;lib\assimp\Release;C:\Users\user\source\repos\AyranEngine_v2\lib\sfml;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -114,6 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,6 +130,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +146,7 @@
     <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityManager.h" />
     <ClInclude Include="Enums.h" />
+    <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="Mesh.h" />
@@ -155,6 +158,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Framebuffer.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="MemoryPool.cpp" />
     <ClCompile Include="Mesh.cpp" />

@@ -19,10 +19,16 @@ class EntityManager;
 class Entity;
 struct Component;
 class Model;
+struct cModel;
+class Framebuffer;
 
 typedef std::map<ShaderType, Shader> ShaderMap;
 typedef std::map<unsigned int, ActionType> ActionMap;
 typedef std::map<std::string, std::shared_ptr<Scene>> SceneMap;
+typedef std::map<std::string, std::shared_ptr<Model>> ModelMap;
+typedef std::map<Primitive, std::shared_ptr<Model>> PrimitiveModelMap;
+typedef std::map<float, Entity*> BlendMap;
+typedef std::map<FramebufferType, std::shared_ptr<Framebuffer>> FramebufferMap;
 
 class Engine
 {
@@ -66,7 +72,16 @@ public:
 	SceneMap						sceneMap;
 	std::shared_ptr<Scene>			activeScene						= nullptr;
 
-	std::vector<std::shared_ptr<Model>> models;
+	ModelMap						models;
+	PrimitiveModelMap				primitiveModels;
+
+	BlendMap						blendMap;
+
+	FramebufferMap				    framebuffers;
+	std::unique_ptr<Entity>			postProcessingQuad;
+	std::shared_ptr<Model>			postProcessingQuadModel;
+	ShaderMap						postProcessingShaders;
+	Shader							activePostProcessingShader;
 
 private:
 
@@ -88,6 +103,9 @@ private:
 	glm::vec3				globalLightAmbient				= { 0.0f, 0.0f, 0.0f };
 	glm::vec3				globalLightDiffuse				= { 0.0f, 0.0f, 0.0f };
 	glm::vec3				globalLightSpecular				= { 0.0f, 0.0f, 0.0f };
+
+	bool					BLEND							= true;
+	bool					POST_PROCESSING					= false;
 
 public:
 	void Run();
@@ -111,7 +129,9 @@ private:
 	void SetupShaders();
 	void DefaultShaderUpdate();
 	void OnStartEngine();
+	void LoadModels();
 	void ProcessInput();
+	void ExecuteActions();
 	void ExecuteActions(Entity& e);
 
 public:
@@ -135,8 +155,19 @@ private:
 
 private:
 	void CalculateDeltaTime();
-	void ClearScreen(float r, float g, float b, float a);
+	void ClearScreen(float r = 0, float g = 0, float b = 0, float a = 0);
 	void Render();
+	void NormalRender();
+	void BlendRender();
+	void DrawEntity(Entity e);
+	void DrawOutlinedModel(Entity e, cModel& model);
+
+	void EnablePostProcessing();
+
+	std::vector<Entity> outlinedObjects;
+
+public:
+	double GetTimeSinceCreation() const;
 
 public:
 	void BindInputKey(unsigned int key, ActionType action);
@@ -145,10 +176,16 @@ public:
 	void OnEntityDestroy(Entity& e);
 	void OnAddComponent(const Component& e);
 	void OnRemoveComponent(const Component& e);
+	std::vector<Entity>& GetEntitiesWithTag(const std::string& tag);
 
 public:
 	void AddGlobalLight(const glm::vec3& direction = glm::vec3(0.3f, -1.0f, 0.3f), const glm::vec3& ambient = glm::vec3(0.1f), const glm::vec3& diffuse = glm::vec3(1.0f), const glm::vec3& specular = glm::vec3(1.0f));
+	void OutlineEntity(Entity e, glm::vec3 color = { 1.0f, 0.0f, 0.0f });
+	void RemoveOutline(Entity e);
+	void SetBlending(bool blend, GLenum sourceFactor = GL_SRC_ALPHA, GLenum destinationFactor = GL_ONE_MINUS_SRC_ALPHA);
+	void SetPostProcessing(bool postProcessing);
 
 private:
 	void TransformEntities();
+	void InitializeCamera();
 };

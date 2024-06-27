@@ -5,6 +5,7 @@
 #include <glfw/glfw3.h>
 
 class Shader;
+struct TextureInfo;
 
 enum class TextureType
 {
@@ -16,22 +17,30 @@ class Texture2D
 {
 public:
 	Texture2D();
-	bool load(const std::string& path);
+	bool load(const std::string& path, TextureInfo& info);
 
 	unsigned int ID;
-	TextureType type;
-	std::string path;
+	unsigned int textureID = 0;
+	TextureType  type;
+	std::string  path;
 
-	void use(unsigned int i) const;
+	void use() const;
 
 	void setHorizontalWrapMode(GLenum mode);
 	void setVerticalWrapMode(GLenum mode);
 	void setMinFilter(GLenum filter);
 	void setMagFilter(GLenum filter);
 
+	void CreateAsBuffer(GLenum bufferType, unsigned int width, unsigned int height);
+
 private:
 	GLenum horizontalWrapMode;
 	GLenum verticalWrapMode;
 	GLenum minFilter;
 	GLenum magFilter;
+};
+
+struct TextureInfo
+{
+	bool alphaChannel = false;
 };

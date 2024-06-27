@@ -12,8 +12,9 @@ Scene::Scene(const std::string& Name): name{Name} {}
 
 void Scene::OnStartScene()
 {
+
 	Entity player = Engine::Instance().AddEntity("player");
-	player.addComponent<cTransform>(glm::vec3(0.0f, 0.0f, 4.0f));
+	player.addComponent<cTransform>(glm::vec3(10.0f, 2.0f, 4.0f));
 	player.addComponent<cInput>();
 	player.addComponent<cCamera>();
 	Engine::Instance().SetMainCamera(&player.getComponent<cCamera>());
@@ -27,6 +28,13 @@ void Scene::OnStartScene()
 	playerInput.BindAction(ActionType::MOVE_DOWN);
 	playerInput.BindAction(ActionType::TOGGLE_FLASHLIGHT);
 	playerInput.BindAction(ActionType::RUN);
+	playerInput.BindAction(ActionType::SELECT_0);
+	playerInput.BindAction(ActionType::SELECT_1);
+	playerInput.BindAction(ActionType::SELECT_2);
+	playerInput.BindAction(ActionType::SELECT_3);
+	playerInput.BindAction(ActionType::SELECT_4);
+	playerInput.BindAction(ActionType::SELECT_5);
+	playerInput.BindAction(ActionType::SELECT_6);
 
 	Entity light = Engine::Instance().AddEntity("lightSource");
 	light.addComponent<cPointLight>();
@@ -47,17 +55,24 @@ void Scene::OnStartScene()
 	for (int i = 0; i < 10; ++i)
 	{
 		Entity house = Engine::Instance().AddEntity("house" + std::to_string(i));
-		house.addComponent<cModel>(Engine::Instance().models[0]);
+		house.addComponent<cModel>(Engine::Instance().models["house"]);
 		house.addComponent<cTransform>(glm::vec3(0.0f + i * 35.0f, 0.0f, 0.0f));
 	}
 
 	Entity ashtray = Engine::Instance().AddEntity("ashtray");
-	ashtray.addComponent<cModel>(Engine::Instance().models[1]);
+	ashtray.addComponent<cModel>(Engine::Instance().models["ashtray"]);
 	ashtray.addComponent<cTransform>(glm::vec3(1.0f, 1.4f, 2.0f));
-	ashtray.addComponent<cInput>();
-	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_X);
-	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Y);
-	ashtray.getComponent<cInput>().BindAction(ActionType::ROTATE_Z);
+
+	Entity glass = Engine::Instance().AddEntity("glass");
+	glass.addComponent<cModel>(Engine::Instance().models["transparent_window"]);
+	glass.addComponent<cTransform>(glm::vec3(10.0f, 2.0f, 10.0f));
+
+	Engine::Instance().OutlineEntity(ashtray, glm::vec3(0.0f, 0.5f, 0.8f));
+
+	Entity temple = Engine::Instance().AddEntity("temple");
+	temple.addComponent<cModel>(Engine::Instance().models["commodore"]);
+	temple.addComponent<cTransform>(glm::vec3(0.0f, 0.0f, 30.0f));
+	Engine::Instance().AddLocalRotation(temple, glm::vec3(0.0f, 1.0f, 0.0f), 180.0f);
 
 	Engine::Instance().AddGlobalLight();
 
@@ -80,10 +95,14 @@ void Scene::BindActions()
 	Engine::Instance().BindInputKey(GLFW_KEY_O, ActionType::MOVE_DOWN1);
 	Engine::Instance().BindInputKey(GLFW_KEY_F, ActionType::TOGGLE_FLASHLIGHT);
 	Engine::Instance().BindInputKey(GLFW_KEY_LEFT_SHIFT, ActionType::RUN);
-	Engine::Instance().BindInputKey(GLFW_KEY_V, ActionType::ROTATE_X);
-	Engine::Instance().BindInputKey(GLFW_KEY_B, ActionType::ROTATE_Y);
-	Engine::Instance().BindInputKey(GLFW_KEY_N, ActionType::ROTATE_Z);
-	
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_0, ActionType::SELECT_0);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_1, ActionType::SELECT_1);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_2, ActionType::SELECT_2);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_3, ActionType::SELECT_3);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_4, ActionType::SELECT_4);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_5, ActionType::SELECT_5);
+	Engine::Instance().BindInputKey(GLFW_KEY_KP_6, ActionType::SELECT_6);
+
 	return;
 }
 
@@ -93,7 +112,7 @@ void Scene::DefineActions(Entity& e, Action& action)
 	{
 		float deltaTime = float(Engine::Instance().deltaTime);
 		cTransform& entityTransform = e.getComponent<cTransform>();
-		
+
 		switch (action.type)
 		{
 		case ActionType::MOVE_FORWARD:
@@ -150,17 +169,55 @@ void Scene::DefineActions(Entity& e, Action& action)
 			else if (action.eventType == ActionEventType::END)
 				moveSpeed = 2;
 			break;
-		case ActionType::ROTATE_Y:
-			if (action.eventType == ActionEventType::CONTINUE)
-				Engine::Instance().AddGlobalRotation(e, glm::vec3(0.0f, 1.0f, 0.0f), 40.0f * deltaTime);
+		case ActionType::SELECT_0:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::POST_PROCESSING_DEFAULT]);
+			}
 			break;
-		case ActionType::ROTATE_X:
-			if (action.eventType == ActionEventType::CONTINUE)
-				Engine::Instance().AddGlobalRotation(e, glm::vec3(1.0f, 0.0f, 0.0f), 40.0f * deltaTime);
+		case ActionType::SELECT_1:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::COLOR_INVERSION]);
+			}
 			break;
-		case ActionType::ROTATE_Z:
-			if (action.eventType == ActionEventType::CONTINUE)
-				Engine::Instance().AddGlobalRotation(e, glm::vec3(0.0f, 0.0f, 1.0f), 40.0f * deltaTime);
+		case ActionType::SELECT_2:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::GRAYSCALE]);
+			}
+			break;
+		case ActionType::SELECT_3:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::SHARPEN]);
+			}
+			break;
+		case ActionType::SELECT_4:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::BLUR]);
+			}
+			break;
+		
+		case ActionType::SELECT_5:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::EDGE_DETECTION]);
+			}
+			break;
+		case ActionType::SELECT_6:
+			if (action.eventType == ActionEventType::BEGIN)
+			{
+				Engine::Instance().postProcessingQuad->removeComponent<cShader>();
+				Engine::Instance().postProcessingQuad->addComponent<cShader>(Engine::Instance().postProcessingShaders[ShaderType::CUSTOM_EFFECT]);
+			}
 			break;
 		}
 	}
@@ -180,4 +237,5 @@ void Scene::DefineActions(Entity& e, Action& action)
 
 void Scene::OnUpdate()
 {
+
 }

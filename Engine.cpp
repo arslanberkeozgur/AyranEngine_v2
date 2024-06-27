@@ -8,12 +8,14 @@
 #include "Scene.h"
 #include "Model.h"
 #include "stb_image.h"
+#include "Framebuffer.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <typeinfo>
+#include <filesystem>
 
 unsigned int Engine::SCREEN_WIDTH  = 1600;
 unsigned int Engine::SCREEN_HEIGHT = 900;
@@ -41,8 +43,12 @@ void Engine::Run()
 	SetupShaders();
 	OnStartEngine();
 
+	SetPostProcessing(true);
+
 	while (!glfwWindowShouldClose(window))
 	{
+		postProcessingShaders[ShaderType::CUSTOM_EFFECT].use();
+		postProcessingShaders[ShaderType::CUSTOM_EFFECT].setFloat("t", GetTimeSinceCreation());
 		CalculateDeltaTime();
 		entityManager->update();
 		ProcessInput();
@@ -87,12 +93,23 @@ void Engine::CreateWindow()
 
 void Engine::SetupShaders()
 {
+	// Load all the shaders.
 	shaderMap[ShaderType::DEFAULT].load("shaders/vertexShader.vert", "shaders/fragmentShader.frag");
 	shaderMap[ShaderType::LIGHT_SOURCE].load("shaders/lightVertexShader.vert", "shaders/simpleColorFragmentShader.frag");
 	shaderMap[ShaderType::OUTLINE].load("shaders/lightVertexShader.vert", "shaders/simpleColorFragmentShader.frag");
 
-	activeShader = shaderMap[ShaderType::DEFAULT];
+	postProcessingShaders[ShaderType::POST_PROCESSING_DEFAULT].load("shaders/ppQuad.vert", "shaders/ppDefault.frag");
+	postProcessingShaders[ShaderType::COLOR_INVERSION].load("shaders/ppQuad.vert", "shaders/ppInversion.frag");
+	postProcessingShaders[ShaderType::GRAYSCALE].load("shaders/ppQuad.vert", "shaders/ppGrayscale.frag");
+	postProcessingShaders[ShaderType::SHARPEN].load("shaders/ppQuad.vert", "shaders/ppSharpen.frag");
+	postProcessingShaders[ShaderType::BLUR].load("shaders/ppQuad.vert", "shaders/ppBlur.frag");
+	postProcessingShaders[ShaderType::EDGE_DETECTION].load("shaders/ppQuad.vert", "shaders/ppEdgeDetection.frag");
+	postProcessingShaders[ShaderType::CUSTOM_EFFECT].load("shaders/ppQuad.vert", "shaders/ppCustomEffect.frag");
 
+	activeShader = shaderMap[ShaderType::DEFAULT];
+	activePostProcessingShader = postProcessingShaders[ShaderType::POST_PROCESSING_DEFAULT];
+
+	// Set some default values for the default shader.
 	activeShader.use();
 	activeShader.setFloat("material.shininess", 64.0f);
 	activeShader.setFloat("camInfo.near", nearFrustum);
@@ -101,16 +118,7 @@ void Engine::SetupShaders()
 
 void Engine::OnStartEngine()
 {
-	TextureInfo info;
-	defaultTexture.load("textures/white.jpg", info);
-	defaultTexture.type = TextureType::DIFFUSE;
-
-	models["house"] = std::make_shared<Model>("models/house/house.obj", "house");
-	models["ashtray"] = std::make_shared<Model>("models/ashtray/ashtray.obj", "ashtray");
-	models["grass"] = std::make_shared<Model>("models/grass/grass.obj", "grass");
-	models["transparent_window"] = std::make_shared<Model>("models/transparent_window/transparent_window.obj", "transparent_window");
-	
-	primitiveModels[Primitive::QUAD] = std::make_shared<Model>("models/primitives/quad.obj", "quad");
+	LoadModels();
 
 	if (WIREFRAME)
 	{
@@ -119,6 +127,9 @@ void Engine::OnStartEngine()
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_STENCIL_TEST);
+	glEnable(GL_CULL_FACE);
+
+	SetBlending(BLEND);
 
 	// Add default scene.
 	sceneMap["defaultScene"] = std::make_shared<Scene>("defaultScene");
@@ -130,6 +141,41 @@ void Engine::OnStartEngine()
 	entityManager->update();
 
 	InitializeCamera();
+}
+
+void Engine::LoadModels()
+{
+	// Load the default texture for textureless models.
+	TextureInfo info;
+	defaultTexture.load("textures/white.jpg", info);
+	defaultTexture.type = TextureType::DIFFUSE;
+
+	std::string mainPath = "models/custom_models";
+	for (const auto& entry : std::filesystem::directory_iterator(mainPath))
+	{
+		std::string pathStr = entry.path().generic_string();
+		try
+		{
+			std::string modelName = pathStr.substr(pathStr.find_last_of('/') + 1, pathStr.size());
+			for (const auto& file : std::filesystem::directory_iterator(pathStr))
+			{
+				std::string filePathStr = file.path().generic_string();
+				std::string format = filePathStr.substr(filePathStr.find_last_of('.') + 1, filePathStr.size());
+				if (format == "blend" || format == "obj")
+				{
+					models[modelName] = std::make_shared<Model>(filePathStr, modelName);
+					break;
+				}
+			}
+		}
+		catch (...)
+		{
+			std::cout << "ERROR::Error while loading models. Model name folders may not contain '/'." << std::endl;
+		}
+	}
+
+	primitiveModels[Primitive::QUAD] = std::make_shared<Model>("models/primitives/quad.obj", "quad");
+	postProcessingQuadModel = std::make_shared<Model>("models/primitives/quad.obj", "quad");
 }
 
 void Engine::DefaultShaderUpdate()
@@ -225,15 +271,35 @@ void Engine::CalculatePointLights(Shader& shader)
 
 void Engine::Render()
 {
+	if (POST_PROCESSING)
+	{
+		// Bind custom framebuffer.
+		framebuffers[FramebufferType::POST_PROCESSING]->Bind();
+		glEnable(GL_DEPTH_TEST);
+	}
+
 	if (!BLEND)
 		NormalRender();
 	else
 		BlendRender();
+
+	if (POST_PROCESSING)
+	{
+		// Go back to default buffer.
+		framebuffers[FramebufferType::POST_PROCESSING]->Unbind();
+		// Clear color and depth buffer. Clearing stencil buffer causes problems with outlining.
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// Apply the framebuffer's color buffer as a texture to the quad model.
+		postProcessingQuadModel->ApplyTexture(framebuffers[FramebufferType::POST_PROCESSING]->GetColorBuffer());
+		DrawEntity(*postProcessingQuad);
+		glfwSwapBuffers(window);
+	}
 }
 
 void Engine::NormalRender()
 {
-	ClearScreen(0.1f, 0.1f, 0.1f, 0.1f);
+	ClearScreen(0.1f, 0.1f, 0.1f, 1.0f);
 
 	for (Entity& e : entityManager->getEntities())
 	{
@@ -256,7 +322,8 @@ void Engine::NormalRender()
 	}
 
 	glfwPollEvents();
-	glfwSwapBuffers(window);
+	if (!POST_PROCESSING)
+		glfwSwapBuffers(window);
 }
 
 //  Currently outlining and blending work very weirdly together.
@@ -271,7 +338,9 @@ void Engine::BlendRender()
 	{
 		if (e.hasComponent<cModel>() && e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
-			if (e.getComponent<cModel>().model->isTransparent && mainCamera)
+			// Sort transparent objects based on proximity to main camera.
+			// Blending and outlining do not work well together.
+			if (e.getComponent<cModel>().model->isTransparent && mainCamera && !e.getComponent<cModel>().isOutlined)
 			{
 				float distance = glm::distance(
 					GetMainCameraOwner()->getComponent<cTransform>().position, 
@@ -280,6 +349,7 @@ void Engine::BlendRender()
 				blendMap[distance] = &e;
 			}
 
+			// Draw only non-outlined and non-transparent objects first.
 			if (!e.getComponent<cModel>().isOutlined && !e.getComponent<cModel>().model->isTransparent)
 			{
 				DrawEntity(e);
@@ -289,7 +359,7 @@ void Engine::BlendRender()
 
 	for (Entity& e : outlinedObjects)
 	{
-		if (e.hasComponent<cTransform>() && !e.hasComponent<cCamera>() && !e.getComponent<cModel>().model->isTransparent)
+		if (e.hasComponent<cTransform>() && !e.hasComponent<cCamera>())
 		{
 			glStencilMask(0xFF);
 			glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -304,11 +374,13 @@ void Engine::BlendRender()
 	}
 
 	glfwPollEvents();
-	glfwSwapBuffers(window);
+	if (!POST_PROCESSING)
+		glfwSwapBuffers(window);
 }
 
 void Engine::DrawEntity(Entity e)
 {
+	// This should not be handled here.
 	if (!(e.hasComponent<cShader>()))
 	{
 		activeShader = shaderMap[ShaderType::DEFAULT];
@@ -335,7 +407,10 @@ void Engine::DrawEntity(Entity e)
 	activeShader.setFMat3("normalMatrix", normal);
 
 	cModel& entityModel = e.getComponent<cModel>();
+	if (!entityModel.model->isCullable)
+		glDisable(GL_CULL_FACE);
 	entityModel.model->Draw(activeShader);
+	glEnable(GL_CULL_FACE);
 }
 
 void Engine::ProcessInput()
@@ -623,6 +698,24 @@ void Engine::SetBlending(bool blend, GLenum sourceFactor, GLenum destinationFact
 		glDisable(GL_BLEND);
 }
 
+void Engine::SetPostProcessing(bool postProcessing)
+{
+	if (postProcessing && !POST_PROCESSING)
+		EnablePostProcessing();
+
+	POST_PROCESSING = postProcessing;
+}
+
+void Engine::EnablePostProcessing()
+{
+	framebuffers[FramebufferType::POST_PROCESSING] = std::make_shared<Framebuffer>(SCREEN_WIDTH, SCREEN_HEIGHT);
+	framebuffers[FramebufferType::POST_PROCESSING]->Generate();
+	Entity ppq = AddEntity("post_processing_quad");
+	ppq.addComponent<cModel>(postProcessingQuadModel);
+	ppq.addComponent<cShader>(activePostProcessingShader);
+	postProcessingQuad = std::make_unique<Entity>(ppq);
+}
+
 
 // Getter Functions 
 
@@ -634,6 +727,15 @@ double Engine::GetTimeSinceCreation() const
 Engine::~Engine()
 {
 	for (auto& pair : shaderMap)
+	{
+		if (pair.second.ID >= 0)
+		{
+			std::cout << "Shader program destroyed with ID : " << pair.second.ID << std::endl;
+			glDeleteProgram(pair.second.ID);
+		}
+	}
+
+	for (auto& pair : postProcessingShaders)
 	{
 		if (pair.second.ID >= 0)
 		{

@@ -31,6 +31,8 @@ public:
 	void setMinFilter(GLenum filter);
 	void setMagFilter(GLenum filter);
 
+	void CreateAsBuffer(GLenum bufferType, unsigned int width, unsigned int height);
+
 private:
 	GLenum horizontalWrapMode;
 	GLenum verticalWrapMode;

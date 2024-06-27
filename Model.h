@@ -18,13 +18,15 @@ public:
 	~Model();
 
 	void ApplyOptionToAllTextures(TextureRenderOption option);
+	void ApplyTexture(Texture2D texture);
 
-	bool isTransparent = false;
+	bool        isTransparent = false;
+	bool        isCullable    = true;
 	std::string name;
 
 private:
-	std::vector<Mesh> meshes;
-	std::string directory;
+	std::vector<Mesh>      meshes;
+	std::string            directory;
 	std::vector<Texture2D> texturesLoaded;
 
 	void loadModel(const std::string& path);

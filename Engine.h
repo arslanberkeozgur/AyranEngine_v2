@@ -20,6 +20,7 @@ class Entity;
 struct Component;
 class Model;
 struct cModel;
+class Framebuffer;
 
 typedef std::map<ShaderType, Shader> ShaderMap;
 typedef std::map<unsigned int, ActionType> ActionMap;
@@ -27,6 +28,7 @@ typedef std::map<std::string, std::shared_ptr<Scene>> SceneMap;
 typedef std::map<std::string, std::shared_ptr<Model>> ModelMap;
 typedef std::map<Primitive, std::shared_ptr<Model>> PrimitiveModelMap;
 typedef std::map<float, Entity*> BlendMap;
+typedef std::map<FramebufferType, std::shared_ptr<Framebuffer>> FramebufferMap;
 
 class Engine
 {
@@ -75,6 +77,12 @@ public:
 
 	BlendMap						blendMap;
 
+	FramebufferMap				    framebuffers;
+	std::unique_ptr<Entity>			postProcessingQuad;
+	std::shared_ptr<Model>			postProcessingQuadModel;
+	ShaderMap						postProcessingShaders;
+	Shader							activePostProcessingShader;
+
 private:
 
 	std::shared_ptr<EntityManager>	entityManager;
@@ -96,7 +104,8 @@ private:
 	glm::vec3				globalLightDiffuse				= { 0.0f, 0.0f, 0.0f };
 	glm::vec3				globalLightSpecular				= { 0.0f, 0.0f, 0.0f };
 
-	bool					BLEND							= false;
+	bool					BLEND							= true;
+	bool					POST_PROCESSING					= false;
 
 public:
 	void Run();
@@ -120,6 +129,7 @@ private:
 	void SetupShaders();
 	void DefaultShaderUpdate();
 	void OnStartEngine();
+	void LoadModels();
 	void ProcessInput();
 	void ExecuteActions();
 	void ExecuteActions(Entity& e);
@@ -152,6 +162,8 @@ private:
 	void DrawEntity(Entity e);
 	void DrawOutlinedModel(Entity e, cModel& model);
 
+	void EnablePostProcessing();
+
 	std::vector<Entity> outlinedObjects;
 
 public:
@@ -171,6 +183,7 @@ public:
 	void OutlineEntity(Entity e, glm::vec3 color = { 1.0f, 0.0f, 0.0f });
 	void RemoveOutline(Entity e);
 	void SetBlending(bool blend, GLenum sourceFactor = GL_SRC_ALPHA, GLenum destinationFactor = GL_ONE_MINUS_SRC_ALPHA);
+	void SetPostProcessing(bool postProcessing);
 
 private:
 	void TransformEntities();

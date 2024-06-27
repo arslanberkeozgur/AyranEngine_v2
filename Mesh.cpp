@@ -51,6 +51,7 @@ void Mesh::setupMesh()
 
 void Mesh::Draw(Shader& shader)
 {
+	shader.use();
 	unsigned int diffuseNumber = 1;
 	unsigned int specularNumber = 1;
 	for (unsigned int i = 0; i < textures.size(); ++i)
@@ -68,7 +69,6 @@ void Mesh::Draw(Shader& shader)
 			number = specularNumber++;
 			break;
 		}
-
 		shader.setuInt(("material." + name + number).c_str(), i);
 		textures[i].use();
 	}
@@ -80,25 +80,24 @@ void Mesh::Draw(Shader& shader)
 		Engine::Instance().defaultTexture.use();
 	}
 
-	// This sets the active texture to default so that in future we get nothing unexpected.
-	glActiveTexture(GL_TEXTURE0);
-
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, GLint(indices.size()), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+	// This sets the active texture to default so that in future we get nothing unexpected.
+	glActiveTexture(GL_TEXTURE0);
 }
 
-unsigned int& Mesh::getVAO()
+const unsigned int& Mesh::getVAO() const
 {
 	return VAO;
 }
 
-unsigned int& Mesh::getVBO()
+const unsigned int& Mesh::getVBO() const
 {
 	return VBO;
 }
 
-unsigned int& Mesh::getEBO()
+const unsigned int& Mesh::getEBO() const
 {
 	return EBO;
 }

@@ -26,9 +26,9 @@ public:
 	
 	void Draw(Shader& shader);
 
-	unsigned int& getVAO();
-	unsigned int& getVBO();
-	unsigned int& getEBO();
+	const unsigned int& getVAO() const;
+	const unsigned int& getVBO() const;
+	const unsigned int& getEBO() const;
 
 private:
 	unsigned int VAO, VBO, EBO;
